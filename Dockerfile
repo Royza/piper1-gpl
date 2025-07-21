@@ -1,31 +1,38 @@
-FROM python:3.12 AS builder
+# Use an official NVIDIA CUDA image with Python support
+FROM nvidia/cuda:12.2.0-cudnn8-runtime-ubuntu22.04
 
-RUN apt-get update && \
-    apt-get install --yes --no-install-recommends \
-      build-essential cmake ninja-build git
+# Avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV RUNPOD_HANDLER_ENTRYPOINT=runpod_handler
 
-WORKDIR /app
+# System dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    python3 \
+    python3-pip \
+    python3-dev \
+    python3-venv \
+    build-essential \
+    cmake \
+    ninja-build \
+    espeak-ng \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml setup.py espeak_ng.i CMakeLists.txt MANIFEST.in README.md ./
-COPY src/piper/ ./src/piper/
-COPY script/setup script/dev_build script/package ./script/
-RUN script/setup --dev
-RUN script/dev_build
-RUN script/package
+# Set up working directory
+WORKDIR /workspace
 
-# -----------------------------------------------------------------------------
+# Clone your repo (if not already mounted during build)
+# Alternatively, comment this out if Dockerfile is in the repo already
+# RUN git clone https://github.com/Royza/piper1-gpl.git /workspace
 
-FROM python:3.12-slim
+# Install training dependencies
+COPY . /workspace
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install -e .[train]
 
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
+# Build Cython extension
+RUN chmod +x ./build_monotonic_align.sh && ./build_monotonic_align.sh
+RUN python3 setup.py build_ext --inplace
 
-WORKDIR /app
-COPY --from=builder /app/dist/piper-*linux*.whl ./dist/
-RUN pip3 install ./dist/piper-*linux*.whl
-RUN pip3 install 'flask>=3,<4'
-
-COPY docker/entrypoint.sh /
-
-EXPOSE 5000
-
-ENTRYPOINT ["/entrypoint.sh"]
+# Default RunPod handler entrypoint
+CMD ["python3", "-m", "runpod"]
