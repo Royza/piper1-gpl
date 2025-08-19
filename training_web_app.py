@@ -403,6 +403,9 @@ def upload_audio():
             
         except Exception as e:
             return jsonify({"error": f"Failed to upload audio files: {str(e)}"}), 500
+        
+    except Exception as e:
+        return jsonify({"error": f"Upload request failed: {str(e)}"}), 500
 
 def validate_audio_file(file_path):
     """Validate audio file format, sample rate, and quality"""
