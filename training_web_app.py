@@ -322,87 +322,87 @@ def upload_audio():
         
         if 'audio_files' not in request.files:
             return jsonify({"error": "No audio files provided"}), 400
-    
-    audio_files = request.files.getlist('audio_files')
-    if not audio_files or all(f.filename == '' for f in audio_files):
-        return jsonify({"error": "No files selected"}), 400
-    
-    safe_voice_name = secure_filename(voice_name)
-    audio_dir = DATASETS_DIR / safe_voice_name / "audio"
-    
-    if not audio_dir.exists():
-        return jsonify({"error": "Session not created. Please create session first."}), 400
-    
-    try:
-        # Clear existing audio files
-        for existing_file in audio_dir.glob("*"):
-            if existing_file.is_file():
-                existing_file.unlink()
         
-        # Save and validate new audio files
-        uploaded_files = []
-        validation_warnings = []
-        total_files = len([f for f in audio_files if f.filename])
+        audio_files = request.files.getlist('audio_files')
+        if not audio_files or all(f.filename == '' for f in audio_files):
+            return jsonify({"error": "No files selected"}), 400
         
-        # Initialize progress tracking
-        upload_progress.update({
-            "is_uploading": True,
-            "current_file": 0,
-            "total_files": total_files,
-            "current_filename": "",
-            "operation": "upload"
-        })
+        safe_voice_name = secure_filename(voice_name)
+        audio_dir = DATASETS_DIR / safe_voice_name / "audio"
         
-        for i, audio_file in enumerate(audio_files, 1):
-            if audio_file.filename:
-                # Update progress
-                upload_progress.update({
-                    "current_file": i,
-                    "current_filename": audio_file.filename
-                })
-                
-                safe_filename = secure_filename(audio_file.filename)
-                if safe_filename:
-                    file_path = audio_dir / safe_filename
-                    audio_file.save(file_path)
+        if not audio_dir.exists():
+            return jsonify({"error": "Session not created. Please create session first."}), 400
+        
+        try:
+            # Clear existing audio files
+            for existing_file in audio_dir.glob("*"):
+                if existing_file.is_file():
+                    existing_file.unlink()
+            
+            # Save and validate new audio files
+            uploaded_files = []
+            validation_warnings = []
+            total_files = len([f for f in audio_files if f.filename])
+            
+            # Initialize progress tracking
+            upload_progress.update({
+                "is_uploading": True,
+                "current_file": 0,
+                "total_files": total_files,
+                "current_filename": "",
+                "operation": "upload"
+            })
+            
+            for i, audio_file in enumerate(audio_files, 1):
+                if audio_file.filename:
+                    # Update progress
+                    upload_progress.update({
+                        "current_file": i,
+                        "current_filename": audio_file.filename
+                    })
                     
-                    # Validate audio file (if enabled)
-                    if ENABLE_AUDIO_VALIDATION:
-                        validation_result = validate_audio_file(file_path)
-                        if validation_result["valid"]:
-                            uploaded_files.append(safe_filename)
-                            if validation_result.get("warnings"):
-                                validation_warnings.extend([f"{safe_filename}: {w}" for w in validation_result["warnings"]])
+                    safe_filename = secure_filename(audio_file.filename)
+                    if safe_filename:
+                        file_path = audio_dir / safe_filename
+                        audio_file.save(file_path)
+                        
+                        # Validate audio file (if enabled)
+                        if ENABLE_AUDIO_VALIDATION:
+                            validation_result = validate_audio_file(file_path)
+                            if validation_result["valid"]:
+                                uploaded_files.append(safe_filename)
+                                if validation_result.get("warnings"):
+                                    validation_warnings.extend([f"{safe_filename}: {w}" for w in validation_result["warnings"]])
+                            else:
+                                # Remove invalid file
+                                file_path.unlink()
+                                validation_warnings.append(f"{safe_filename}: {validation_result['error']} (file removed)")
                         else:
-                            # Remove invalid file
-                            file_path.unlink()
-                            validation_warnings.append(f"{safe_filename}: {validation_result['error']} (file removed)")
-                    else:
-                        # Skip validation, just accept the file
-                        uploaded_files.append(safe_filename)
-        
-        # Reset progress tracking
-        upload_progress.update({
-            "is_uploading": False,
-            "current_file": 0,
-            "total_files": 0,
-            "current_filename": "",
-            "operation": ""
-        })
-        
-        response_data = {
-            "message": f"{len(uploaded_files)}/{total_files} audio files uploaded successfully",
-            "files": uploaded_files,
-            "audio_dir": str(audio_dir)
-        }
-        
-        if validation_warnings:
-            response_data["warnings"] = validation_warnings
-        
-        return jsonify(response_data)
-        
-    except Exception as e:
-        return jsonify({"error": f"Failed to upload audio files: {str(e)}"}), 500
+                            # Skip validation, just accept the file
+                            uploaded_files.append(safe_filename)
+            
+            # Reset progress tracking
+            upload_progress.update({
+                "is_uploading": False,
+                "current_file": 0,
+                "total_files": 0,
+                "current_filename": "",
+                "operation": ""
+            })
+            
+            response_data = {
+                "message": f"{len(uploaded_files)}/{total_files} audio files uploaded successfully",
+                "files": uploaded_files,
+                "audio_dir": str(audio_dir)
+            }
+            
+            if validation_warnings:
+                response_data["warnings"] = validation_warnings
+            
+            return jsonify(response_data)
+            
+        except Exception as e:
+            return jsonify({"error": f"Failed to upload audio files: {str(e)}"}), 500
 
 def validate_audio_file(file_path):
     """Validate audio file format, sample rate, and quality"""
