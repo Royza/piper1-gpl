@@ -1506,7 +1506,7 @@
             
             try {
                 // For large batches, process in chunks to avoid server limits
-                const chunkSize = 50; // Smaller chunks for better reliability
+                const chunkSize = 10; // Very small chunks for maximum reliability
                 let totalUploaded = 0;
                 let allUploadedFiles = [];
                 
@@ -1515,32 +1515,71 @@
                     const chunkNumber = Math.floor(i / chunkSize) + 1;
                     const totalChunks = Math.ceil(audioFiles.length / chunkSize);
                     
-                    statusDiv.textContent = `Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} files)...`;
+                    let chunkSuccess = false;
+                    let retryCount = 0;
+                    const maxRetries = 3;
                     
-                    const formData = new FormData();
-                    formData.append('voice_name', voiceName);
-                    chunk.forEach(file => {
-                        formData.append('audio_files', file);
-                    });
-                    
-                    const response = await fetch('/upload_audio', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (response.ok) {
-                        totalUploaded += chunk.length;
-                        if (result.files) {
-                            allUploadedFiles = allUploadedFiles.concat(result.files);
+                    while (!chunkSuccess && retryCount < maxRetries) {
+                        if (retryCount > 0) {
+                            statusDiv.textContent = `Retrying chunk ${chunkNumber}/${totalChunks} (attempt ${retryCount + 1}/${maxRetries})...`;
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+                        } else {
+                            statusDiv.textContent = `Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} files)...`;
                         }
-                        statusDiv.textContent = `✅ Chunk ${chunkNumber}/${totalChunks} uploaded (${totalUploaded}/${audioFiles.length} total)`;
-                    } else {
-                        clearInterval(progressInterval);
-                        statusDiv.className = 'upload-status error';
-                        statusDiv.textContent = `❌ Chunk ${chunkNumber} failed: ${result.error}`;
-                        return;
+                        
+                        const formData = new FormData();
+                        formData.append('voice_name', voiceName);
+                        chunk.forEach(file => {
+                            formData.append('audio_files', file);
+                        });
+                        
+                        try {
+                            const response = await fetch('/upload_audio', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (response.ok) {
+                                chunkSuccess = true;
+                                totalUploaded += chunk.length;
+                                if (result.files) {
+                                    allUploadedFiles = allUploadedFiles.concat(result.files);
+                                }
+                                statusDiv.textContent = `✅ Chunk ${chunkNumber}/${totalChunks} uploaded (${totalUploaded}/${audioFiles.length} total)`;
+                            } else {
+                                retryCount++;
+                                if (retryCount >= maxRetries) {
+                                    // Try to parse error message
+                                    let errorMsg = 'Unknown error';
+                                    try {
+                                        if (result.error) {
+                                            errorMsg = result.error;
+                                        } else if (response.status === 413) {
+                                            errorMsg = 'Chunk too large - reducing chunk size';
+                                        } else if (response.status === 500) {
+                                            errorMsg = 'Server error - chunk may be too large';
+                                        }
+                                    } catch (e) {
+                                        errorMsg = 'Failed to parse server response';
+                                    }
+                                    
+                                    clearInterval(progressInterval);
+                                    statusDiv.className = 'upload-status error';
+                                    statusDiv.textContent = `❌ Chunk ${chunkNumber} failed after ${maxRetries} attempts: ${errorMsg}`;
+                                    return;
+                                }
+                            }
+                        } catch (error) {
+                            retryCount++;
+                            if (retryCount >= maxRetries) {
+                                clearInterval(progressInterval);
+                                statusDiv.className = 'upload-status error';
+                                statusDiv.textContent = `❌ Chunk ${chunkNumber} failed after ${maxRetries} attempts: ${error.message}`;
+                                return;
+                            }
+                        }
                     }
                     
                     // Small delay between chunks

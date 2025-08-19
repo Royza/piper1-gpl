@@ -377,8 +377,8 @@ def upload_audio():
                 "operation": "upload"
             })
             
-            # Process files in chunks of 100 to avoid server limits
-            chunk_size = 100
+            # Process files in chunks of 10 to avoid server limits
+            chunk_size = 10
             for chunk_start in range(0, total_files, chunk_size):
                 chunk_end = min(chunk_start + chunk_size, total_files)
                 chunk_files = valid_files[chunk_start:chunk_end]
