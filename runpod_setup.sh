@@ -6,6 +6,20 @@ set -e  # Exit on any error
 
 echo "🚀 Setting up Enhanced PiperTTS Training System on Runpod..."
 
+# Set default environment variables if not provided
+export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+export PYTHONPATH=${PYTHONPATH:-/workspace/piper1-gpl}
+export WORKSPACE_DIR=${WORKSPACE_DIR:-/workspace}
+export DEBUG=${DEBUG:-0}
+export LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+echo "🔧 Environment Configuration:"
+echo "  CUDA_VISIBLE_DEVICES: $CUDA_VISIBLE_DEVICES"
+echo "  PYTHONPATH: $PYTHONPATH"
+echo "  WORKSPACE_DIR: $WORKSPACE_DIR"
+echo "  DEBUG: $DEBUG"
+echo "  LOG_LEVEL: $LOG_LEVEL"
+
 # Update system packages
 echo "📦 Updating system packages..."
 apt-get update && apt-get install -y \
@@ -28,7 +42,7 @@ apt-get update && apt-get install -y \
 
 # Clone the repository
 echo "📥 Cloning PiperTTS repository..."
-cd /workspace
+cd $WORKSPACE_DIR
 if [ ! -d "piper1-gpl" ]; then
     git clone https://github.com/Royza/piper1-gpl.git
 fi
@@ -59,8 +73,8 @@ pip install -r requirements.txt
 echo "📁 Creating necessary directories..."
 mkdir -p datasets models checkpoints logs temp_synthesis
 
-# Set up environment variables
-export PYTHONPATH="${PYTHONPATH}:/workspace/piper1-gpl"
+# Set up environment variables for the session
+export PYTHONPATH="${PYTHONPATH}:${WORKSPACE_DIR}/piper1-gpl"
 export CUDA_VISIBLE_DEVICES=0
 
 # Display system information
@@ -79,7 +93,7 @@ echo ""
 echo "🎉 Setup complete! Starting Enhanced PiperTTS Training Web Server..."
 echo "📊 Access your interface at: http://localhost:5000"
 echo "📈 TensorBoard available at: http://localhost:6006"
-echo "💾 Workspace mounted at: /workspace"
+echo "💾 Workspace mounted at: $WORKSPACE_DIR"
 echo "🔧 SSH access available for debugging"
 echo ""
 
