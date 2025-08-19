@@ -46,8 +46,8 @@ except ImportError:
 app = Flask(__name__)
 
 # Configure upload limits for large file batches
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10GB max upload size
-app.config['UPLOAD_TIMEOUT'] = 3600  # 1 hour timeout
+app.config['MAX_CONTENT_LENGTH'] = None  # Disable Flask's limit, let server handle it
+app.config['UPLOAD_TIMEOUT'] = 7200  # 2 hour timeout
 
 # Additional Flask configurations for large uploads
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -344,8 +344,8 @@ def upload_csv():
 def upload_audio():
     """Upload and save audio files"""
     try:
-        # Check if request is too large
-        if request.content_length and request.content_length > app.config['MAX_CONTENT_LENGTH']:
+        # Check if request is too large (only if we have a limit set)
+        if app.config['MAX_CONTENT_LENGTH'] and request.content_length and request.content_length > app.config['MAX_CONTENT_LENGTH']:
             return jsonify({"error": f"Upload too large. Maximum size is {app.config['MAX_CONTENT_LENGTH'] / (1024**3):.1f}GB. Try uploading in smaller batches of 500-1000 files."}), 413
         
         voice_name = request.form.get('voice_name', '').strip()
@@ -2537,6 +2537,9 @@ if __name__ == '__main__':
     print(f"Checkpoints directory: {CHECKPOINTS_DIR.absolute()}")
     print(f"Logs directory: {LOGS_DIR.absolute()}")
     print("Session-based training structure enabled!")
-    print(f"Max upload size: {app.config['MAX_CONTENT_LENGTH'] / (1024**3):.1f}GB")
+    if app.config['MAX_CONTENT_LENGTH']:
+        print(f"Max upload size: {app.config['MAX_CONTENT_LENGTH'] / (1024**3):.1f}GB")
+    else:
+        print("Max upload size: Unlimited (server-controlled)")
     
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True, use_reloader=False)
