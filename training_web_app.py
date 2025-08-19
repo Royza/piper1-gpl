@@ -49,6 +49,14 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10GB max upload size
 app.config['UPLOAD_TIMEOUT'] = 3600  # 1 hour timeout
 
+# Additional Flask configurations for large uploads
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# Increase request timeout and buffer size
+import werkzeug
+werkzeug.serving.WSGIRequestHandler.protocol_version = "HTTP/1.1"
+
 # Configuration
 DATASETS_DIR = Path("datasets")
 CHECKPOINTS_DIR = Path("checkpoints") 
@@ -302,13 +310,18 @@ def upload_csv():
 @app.route('/upload_audio', methods=['POST'])
 def upload_audio():
     """Upload and save audio files"""
-    voice_name = request.form.get('voice_name', '').strip()
-    
-    if not voice_name:
-        return jsonify({"error": "Voice name is required"}), 400
-    
-    if 'audio_files' not in request.files:
-        return jsonify({"error": "No audio files provided"}), 400
+    try:
+        # Check if request is too large
+        if request.content_length and request.content_length > app.config['MAX_CONTENT_LENGTH']:
+            return jsonify({"error": f"Upload too large. Maximum size is {app.config['MAX_CONTENT_LENGTH'] / (1024**3):.1f}GB. Try uploading in smaller batches of 500-1000 files."}), 413
+        
+        voice_name = request.form.get('voice_name', '').strip()
+        
+        if not voice_name:
+            return jsonify({"error": "Voice name is required"}), 400
+        
+        if 'audio_files' not in request.files:
+            return jsonify({"error": "No audio files provided"}), 400
     
     audio_files = request.files.getlist('audio_files')
     if not audio_files or all(f.filename == '' for f in audio_files):
@@ -2470,11 +2483,22 @@ def load_voice_model():
     except Exception as e:
         return jsonify({"error": f"Failed to load voice model: {str(e)}"}), 500
 
+@app.errorhandler(413)
+def too_large(e):
+    """Handle request entity too large errors"""
+    return jsonify({"error": "Upload too large. Please try uploading fewer files or use a smaller batch size."}), 413
+
+@app.errorhandler(500)
+def internal_error(e):
+    """Handle internal server errors"""
+    return jsonify({"error": "Internal server error. Please try again with a smaller batch."}), 500
+
 if __name__ == '__main__':
     print("Starting PiperTTS Training Web Interface...")
     print(f"Datasets directory: {DATASETS_DIR.absolute()}")
     print(f"Checkpoints directory: {CHECKPOINTS_DIR.absolute()}")
     print(f"Logs directory: {LOGS_DIR.absolute()}")
     print("Session-based training structure enabled!")
+    print(f"Max upload size: {app.config['MAX_CONTENT_LENGTH'] / (1024**3):.1f}GB")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)

@@ -1459,6 +1459,14 @@
                 return;
             }
             
+            // Warn for large uploads
+            if (fileInput.files.length > 1000) {
+                const proceed = confirm(`You're uploading ${fileInput.files.length} files. Large uploads may take a long time and could fail. Consider uploading in smaller batches of 500-1000 files. Continue anyway?`);
+                if (!proceed) {
+                    return;
+                }
+            }
+            
             const formData = new FormData();
             formData.append('voice_name', voiceName);
             
