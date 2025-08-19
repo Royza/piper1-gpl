@@ -883,16 +883,16 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="audio_upload">Audio Files *</label>
-                        <div class="upload-area" onclick="document.getElementById('audio_files').click()">
+                        <label for="audio_upload">Audio Folder *</label>
+                        <div class="upload-area" onclick="document.getElementById('audio_folder').click()">
                             <div class="upload-placeholder">
-                                <span class="upload-icon">🎵</span>
-                                <span class="upload-text">Click to select audio files (.wav, .mp3, .flac)</span>
+                                <span class="upload-icon">📁</span>
+                                <span class="upload-text">Click to select a folder containing audio files (.wav, .mp3, .flac)</span>
                             </div>
                         </div>
-                        <input type="file" id="audio_files" multiple accept=".wav,.mp3,.flac" style="display: none;" onchange="uploadAudio()">
+                        <input type="file" id="audio_folder" webkitdirectory directory multiple style="display: none;" onchange="uploadAudioFolder()">
                         <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                            💡 Tip: For large batches (1000+ files), select files in smaller groups of 500-1000 files each.
+                            💡 Select a folder and all audio files will be uploaded automatically.
                         </div>
                         <div id="audioStatus" class="upload-status"></div>
                     </div>
@@ -1453,6 +1453,88 @@
         }
         
 
+        
+        // Audio folder upload
+        async function uploadAudioFolder() {
+            const voiceName = document.getElementById('voice_name').value.trim();
+            const fileInput = document.getElementById('audio_folder');
+            const statusDiv = document.getElementById('audioStatus');
+            
+            if (!fileInput.files.length) {
+                return;
+            }
+            
+            // Filter only audio files
+            const audioFiles = Array.from(fileInput.files).filter(file => 
+                file.name.toLowerCase().endsWith('.wav') || 
+                file.name.toLowerCase().endsWith('.mp3') || 
+                file.name.toLowerCase().endsWith('.flac')
+            );
+            
+            if (audioFiles.length === 0) {
+                statusDiv.className = 'upload-status error';
+                statusDiv.textContent = '❌ No audio files (.wav, .mp3, .flac) found in selected folder';
+                return;
+            }
+            
+            statusDiv.className = 'upload-status uploading';
+            statusDiv.textContent = `Processing folder: ${audioFiles.length} audio files found...`;
+            
+            // Start progress monitoring
+            const progressInterval = setInterval(async () => {
+                try {
+                    const progressResponse = await fetch('/upload_progress');
+                    const progress = await progressResponse.json();
+                    
+                    if (progress.is_uploading && progress.total_files > 0) {
+                        const percent = Math.round((progress.current_file / progress.total_files) * 100);
+                        statusDiv.textContent = `Uploading ${progress.current_file}/${progress.total_files} files (${percent}%) - ${progress.current_filename}`;
+                    }
+                } catch (error) {
+                    console.log('Progress fetch error:', error);
+                }
+            }, 500);
+            
+            try {
+                const formData = new FormData();
+                formData.append('voice_name', voiceName);
+                
+                // Add all audio files to form data
+                audioFiles.forEach(file => {
+                    formData.append('audio_files', file);
+                });
+                
+                const response = await fetch('/upload_audio', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                // Clear progress monitoring
+                clearInterval(progressInterval);
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'upload-status success';
+                    let message = `✅ ${result.message}`;
+                    
+                    // Add total files count prominently
+                    if (result.total_files_in_session !== undefined) {
+                        message += `\n📊 Total audio files in directory: ${result.total_files_in_session}`;
+                    }
+                    
+                    statusDiv.textContent = message;
+                    checkTrainingReady();
+                } else {
+                    statusDiv.className = 'upload-status error';
+                    statusDiv.textContent = '❌ ' + result.error;
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                statusDiv.className = 'upload-status error';
+                statusDiv.textContent = '❌ Upload failed: ' + error.message;
+            }
+        }
         
         // Audio files upload (keeping for backward compatibility)
         async function uploadAudio() {
