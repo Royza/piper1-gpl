@@ -339,10 +339,8 @@ def upload_audio():
             return jsonify({"error": "Session not created. Please create session first."}), 400
         
         try:
-            # Clear existing audio files
-            for existing_file in audio_dir.glob("*"):
-                if existing_file.is_file():
-                    existing_file.unlink()
+            # Don't clear existing files - allow batch uploads
+            # Only clear if explicitly requested (for now, we'll keep existing files)
             
             # Save and validate new audio files
             uploaded_files = []
@@ -395,10 +393,14 @@ def upload_audio():
                 "operation": ""
             })
             
+            # Count total files in directory after upload
+            total_files_in_dir = len(list(audio_dir.glob("*")))
+            
             response_data = {
-                "message": f"{len(uploaded_files)}/{total_files} audio files uploaded successfully",
+                "message": f"{len(uploaded_files)} new files uploaded successfully. Total files in session: {total_files_in_dir}",
                 "files": uploaded_files,
-                "audio_dir": str(audio_dir)
+                "audio_dir": str(audio_dir),
+                "total_files_in_session": total_files_in_dir
             }
             
             if validation_warnings:
