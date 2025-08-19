@@ -340,27 +340,21 @@ def upload_csv():
     except Exception as e:
         return jsonify({"error": f"Failed to upload CSV: {str(e)}"}), 500
 
-@app.route('/upload_audio_folder', methods=['POST'])
-def upload_audio_folder():
-    """Upload audio files from a folder path"""
+@app.route('/upload_audio', methods=['POST'])
+def upload_audio():
+    """Upload and save audio files"""
     try:
-        data = request.get_json()
-        voice_name = data.get('voice_name', '').strip()
-        folder_path = data.get('folder_path', '').strip()
+        voice_name = request.form.get('voice_name', '').strip()
         
         if not voice_name:
             return jsonify({"error": "Voice name is required"}), 400
         
-        if not folder_path:
-            return jsonify({"error": "Folder path is required"}), 400
+        if 'audio_files' not in request.files:
+            return jsonify({"error": "No audio files provided"}), 400
         
-        # Validate folder path
-        folder_path = Path(folder_path)
-        if not folder_path.exists():
-            return jsonify({"error": f"Folder not found: {folder_path}"}), 400
-        
-        if not folder_path.is_dir():
-            return jsonify({"error": f"Path is not a directory: {folder_path}"}), 400
+        audio_files = request.files.getlist('audio_files')
+        if not audio_files or all(f.filename == '' for f in audio_files):
+            return jsonify({"error": "No files selected"}), 400
         
         safe_voice_name = secure_filename(voice_name)
         audio_dir = DATASETS_DIR / safe_voice_name / "audio"
@@ -369,57 +363,35 @@ def upload_audio_folder():
             return jsonify({"error": "Session not created. Please create session first."}), 400
         
         try:
-            # Find all .wav files in the folder
-            wav_files = list(folder_path.glob("*.wav"))
-            mp3_files = list(folder_path.glob("*.mp3"))
-            flac_files = list(folder_path.glob("*.flac"))
+            # Don't clear existing files - allow batch uploads
+            # Only clear if explicitly requested (for now, we'll keep existing files)
             
-            all_audio_files = wav_files + mp3_files + flac_files
-            
-            if not all_audio_files:
-                return jsonify({"error": f"No audio files (.wav, .mp3, .flac) found in folder: {folder_path}"}), 400
+            # Save and validate new audio files
+            uploaded_files = []
+            total_files = len([f for f in audio_files if f.filename])
             
             # Initialize progress tracking
             upload_progress.update({
                 "is_uploading": True,
                 "current_file": 0,
-                "total_files": len(all_audio_files),
+                "total_files": total_files,
                 "current_filename": "",
                 "operation": "upload"
             })
             
-            uploaded_files = []
-            failed_files = []
-            
-            for i, audio_file_path in enumerate(all_audio_files, 1):
-                try:
+            for i, audio_file in enumerate(audio_files, 1):
+                if audio_file.filename:
                     # Update progress
                     upload_progress.update({
                         "current_file": i,
-                        "current_filename": audio_file_path.name
+                        "current_filename": audio_file.filename
                     })
                     
-                    # Copy file to audio directory
-                    destination_path = audio_dir / audio_file_path.name
-                    
-                    # Handle filename conflicts
-                    if destination_path.exists():
-                        base_name = audio_file_path.stem
-                        extension = audio_file_path.suffix
-                        counter = 1
-                        while destination_path.exists():
-                            new_name = f"{base_name}_{counter}{extension}"
-                            destination_path = audio_dir / new_name
-                            counter += 1
-                    
-                    # Copy the file
-                    import shutil
-                    shutil.copy2(audio_file_path, destination_path)
-                    uploaded_files.append(destination_path.name)
-                    
-                except Exception as e:
-                    failed_files.append(f"{audio_file_path.name}: {str(e)}")
-                    continue
+                    safe_filename = secure_filename(audio_file.filename)
+                    if safe_filename:
+                        file_path = audio_dir / safe_filename
+                        audio_file.save(file_path)
+                        uploaded_files.append(safe_filename)
             
             # Reset progress tracking
             upload_progress.update({
@@ -434,20 +406,16 @@ def upload_audio_folder():
             total_files_in_dir = len(list(audio_dir.glob("*")))
             
             response_data = {
-                "message": f"{len(uploaded_files)} files copied from folder successfully. Total audio files in directory: {total_files_in_dir}",
+                "message": f"{len(uploaded_files)} new files uploaded successfully. Total audio files in directory: {total_files_in_dir}",
                 "files": uploaded_files,
                 "audio_dir": str(audio_dir),
-                "total_files_in_session": total_files_in_dir,
-                "failed_files": failed_files
+                "total_files_in_session": total_files_in_dir
             }
-            
-            if failed_files:
-                response_data["message"] += f" ({len(failed_files)} files failed)"
             
             return jsonify(response_data)
             
         except Exception as e:
-            return jsonify({"error": f"Failed to process folder: {str(e)}"}), 500
+            return jsonify({"error": f"Failed to upload audio files: {str(e)}"}), 500
         
     except Exception as e:
         return jsonify({"error": f"Upload request failed: {str(e)}"}), 500
