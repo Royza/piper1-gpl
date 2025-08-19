@@ -1,22 +1,82 @@
-.DS_Store
-.idea
-*.log
-tmp/
+# PiperTTS Training System .gitignore
 
-*.py[cod]
-*.egg
-build
-htmlcov
+# Checkpoints and model files
+checkpoints/
+*.ckpt
+*.pth
+*.onnx
+*.onnx.json
+models/
 
-dist/
-local/
-.venv/
-espeak-ng-data/
-
-_skbuild/
-*.egg-info/
-
-src/piper/train/vits/monotonic_align/core.c
-*.so
-
+# Training logs and TensorBoard
+logs/
 lightning_logs/
+tensorboard_logs/
+*.log
+
+# Temporary files
+temp_*/
+tmp/
+*.tmp
+*.temp
+
+# Audio files (training data)
+datasets/*/audio/
+*.wav
+*.mp3
+*.flac
+*.m4a
+
+# Cache files
+cache/
+*.cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Large files that shouldn't be in git
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Python
+*.egg-info/
+dist/
+build/
+.coverage
+.pytest_cache/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.local
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup

@@ -131,9 +131,11 @@ class VitsDataModule(L.LightningDataModule):
             reader = csv.reader(csv_file, delimiter="|")
             for row_number, row in enumerate(reader, start=1):
                 utt_id, text = row[0], row[-1]
-                audio_path = self.audio_dir / utt_id
+                # Extract just the filename, removing any directory prefixes
+                filename = Path(utt_id).name
+                audio_path = self.audio_dir / filename
                 if not audio_path.exists():
-                    audio_path = self.audio_dir / f"{utt_id}.wav"
+                    audio_path = self.audio_dir / f"{filename}.wav"
 
                 if not audio_path.exists():
                     _LOGGER.warning("Missing audio file: %s", audio_path)
@@ -237,10 +239,12 @@ class VitsDataModule(L.LightningDataModule):
         with open(self.csv_path, "r", encoding="utf-8") as csv_file:
             reader = csv.reader(csv_file, delimiter="|")
             for row_number, row in enumerate(reader, start=1):
-                utt_id, text = row[0], row[1]
-                audio_path = self.audio_dir / utt_id
+                utt_id, text = row[0], row[-1]
+                # Extract just the filename, removing any directory prefixes
+                filename = Path(utt_id).name
+                audio_path = self.audio_dir / filename
                 if not audio_path.exists():
-                    audio_path = self.audio_dir / f"{utt_id}.wav"
+                    audio_path = self.audio_dir / f"{filename}.wav"
 
                 if not audio_path.exists():
                     _LOGGER.warning("Missing audio file: %s", audio_path)
@@ -305,6 +309,10 @@ class VitsDataModule(L.LightningDataModule):
             ),
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            persistent_workers=self.num_workers > 0,  # Reuse workers between epochs
+            pin_memory=True,  # Faster GPU transfers
+            prefetch_factor=2 if self.num_workers > 0 else None,  # Load ahead for better throughput
+            shuffle=True,  # Explicit shuffle for training
         )
 
     def test_dataloader(self):
@@ -315,6 +323,9 @@ class VitsDataModule(L.LightningDataModule):
             ),
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            persistent_workers=self.num_workers > 0,
+            pin_memory=True,
+            prefetch_factor=2 if self.num_workers > 0 else None,
         )
 
     def val_dataloader(self):
@@ -325,6 +336,9 @@ class VitsDataModule(L.LightningDataModule):
             ),
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            persistent_workers=self.num_workers > 0,
+            pin_memory=True,
+            prefetch_factor=2 if self.num_workers > 0 else None,
         )
 
     def _trim_silence(

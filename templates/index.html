@@ -1,0 +1,3332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PiperTTS Training Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 30px;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-group {
+            display: flex;
+            align-items: stretch;
+        }
+        
+        .input-group input {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: none;
+        }
+        
+        .btn-browse {
+            background: #6c757d;
+            color: white;
+            border: 2px solid #6c757d;
+            border-left: none;
+            padding: 12px 15px;
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn-browse:hover {
+            background: #5a6268;
+            border-color: #5a6268;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .training-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .refresh-button-container {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        
+
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .checkpoint-upload-container {
+            margin-left: 10px;
+        }
+        
+        .btn-upload-small {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .btn-upload-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-idle { background: #6c757d; }
+        .status-training { background: #28a745; animation: pulse 1.5s infinite; }
+        .status-error { background: #dc3545; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .file-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .file-meta {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        
+        .log-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .system-info {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .system-loading {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        .system-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .system-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .system-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .system-section h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .system-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .system-detail:last-child {
+            border-bottom: none;
+        }
+        
+        .system-detail .label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .system-detail .value {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .performance-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .performance-high {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .performance-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .performance-basic {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d1edff;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .alert-error, .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+        
+        .session-info {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .session-info h3 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e8f4fd;
+        }
+        
+        /* Ensure output name field preserves exact case and formatting */
+        #output_name {
+            text-transform: none !important;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+        
+        .upload-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            opacity: 0.6;
+        }
+        
+        .upload-text {
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .upload-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .upload-status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .upload-status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .upload-status.uploading {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .form-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .training-config {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        
+        .training-config h3 {
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        /* Chat Styles */
+        .chat-config {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .chat-interface {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .chat-config .form-row,
+        .chat-interface .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+            max-width: 100%;
+        }
+
+        .chat-config .form-group,
+        .chat-interface .form-group {
+            flex: 1;
+            min-width: 300px;
+            margin: 0 10px 20px 10px;
+            max-width: calc(50% - 20px);
+        }
+
+        .chat-controls {
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: white;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+
+        /* Model Loading Section Styles */
+        .model-loading-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .model-status {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .model-status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .loading-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .loading-status.loading {
+            display: block;
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .loading-status.success {
+            display: block;
+            background: #d1edff;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .loading-status.error {
+            display: block;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        /* Ensure chat tab content stays within container */
+        #chat.tab-content {
+            max-width: 100%;
+            overflow-x: hidden;
+            padding: 0;
+            margin: 0;
+        }
+
+        #chat.tab-content h2 {
+            margin-bottom: 30px;
+        }
+
+        #chat.tab-content .chat-config,
+        #chat.tab-content .chat-interface {
+            margin-left: 0;
+            margin-right: 0;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .chat-controls {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+
+        .chat-controls button {
+            margin-right: 10px;
+        }
+        
+        .chat-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .autoplay-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+        
+        .autoplay-label {
+            font-size: 14px;
+            color: #666;
+            white-space: nowrap;
+        }
+        
+        /* Toggle Switch Styles */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #007bff;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .chat-welcome {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px 20px;
+        }
+
+        .chat-welcome p {
+            margin-bottom: 10px;
+        }
+
+        .chat-message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .assistant-message {
+            background: white;
+            border: 1px solid #dee2e6;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .message-role {
+            font-weight: bold;
+        }
+
+        .message-time {
+            opacity: 0.7;
+        }
+
+        .message-content {
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message-audio {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .message-audio audio {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid #dee2e6;
+            background: white;
+        }
+
+        .chat-input-area .form-group {
+            margin-bottom: 0;
+        }
+
+        .chat-input-area textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .chat-input-area button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 PiperTTS Training Interface</h1>
+            <p>Train custom voices with ease using a modern web interface</p>
+        </div>
+        
+        <div class="content">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('training')">Training</button>
+                <button class="tab" onclick="showTab('status')">Status</button>
+                <button class="tab" onclick="showTab('export')">Export</button>
+                <button class="tab" onclick="showTab('files')">Files</button>
+                <button class="tab" onclick="showTab('tensorboard')">TensorBoard</button>
+                <button class="tab" onclick="showTab('tools')">Tools</button>
+                <button class="tab" onclick="showTab('chat')">💬 Chat</button>
+            </div>
+            
+            <!-- Training Tab -->
+            <div id="training" class="tab-content active">
+                <h2>Configure Voice Training</h2>
+                
+                <!-- Session Creation Section -->
+                <div id="sessionSection">
+                    <div class="form-group">
+                        <label for="voice_name">Voice Name *</label>
+                        <div class="input-group">
+                            <input type="text" id="voice_name" name="voice_name" required placeholder="e.g., my_custom_voice" onchange="checkSessionExists()">
+                            <button type="button" id="createSessionBtn" class="btn btn-success" onclick="createSession()">🎯 Create Session</button>
+                        </div>
+                        <small class="form-text">Enter a unique name for your voice and create a training session</small>
+                    </div>
+                </div>
+                
+                <!-- File Upload Section (Hidden initially) -->
+                <div id="uploadSection" style="display: none;">
+                    <div class="session-info">
+                        <h3>📁 Session: <span id="currentSessionName"></span></h3>
+                        <p>Upload your training data files below</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="csv_upload">CSV Metadata File *</label>
+                        <div class="upload-area" onclick="document.getElementById('csv_file').click()">
+                            <input type="file" id="csv_file" accept=".csv" style="display: none;" onchange="uploadCSV()">
+                            <div class="upload-placeholder">
+                                <span class="upload-icon">📄</span>
+                                <span class="upload-text">Click to select metadata.csv file</span>
+                            </div>
+                        </div>
+                        <div id="csvStatus" class="upload-status"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="audio_upload">Audio Files *</label>
+                        <div class="upload-area" onclick="document.getElementById('audio_files').click()">
+                            <input type="file" id="audio_files" multiple accept=".wav,.mp3,.flac" style="display: none;" onchange="uploadAudio()">
+                            <div class="upload-placeholder">
+                                <span class="upload-icon">🎵</span>
+                                <span class="upload-text">Click to select audio files (.wav, .mp3, .flac)</span>
+                            </div>
+                        </div>
+                        <div id="audioStatus" class="upload-status"></div>
+                    </div>
+                </div>
+                
+                <!-- Training Configuration Section (Hidden initially) -->
+                <form id="trainingForm" style="display: none;">
+                    <div class="training-config">
+                        <h3>⚙️ Training Configuration</h3>
+                    
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="sample_rate">Sample Rate</label>
+                                <select id="sample_rate" name="sample_rate">
+                                    <option value="22050" selected>22050 Hz</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="training_espeak_voice">eSpeak Voice</label>
+                                <select id="training_espeak_voice" name="espeak_voice">
+                                    <option value="en_US" selected>English (US) - en_US</option>
+                                    <option value="en_GB">English (UK) - en_GB</option>
+                                    <option value="en_AU">English (Australia) - en_AU</option>
+                                    <option value="en_CA">English (Canada) - en_CA</option>
+                                    <option value="en_IN">English (India) - en_IN</option>
+                                    <option value="de_DE">German - de_DE</option>
+                                    <option value="fr_FR">French - fr_FR</option>
+                                    <option value="es_ES">Spanish - es_ES</option>
+                                    <option value="it_IT">Italian - it_IT</option>
+                                    <option value="pt_BR">Portuguese (Brazil) - pt_BR</option>
+                                    <option value="pt_PT">Portuguese (Portugal) - pt_PT</option>
+                                    <option value="ru_RU">Russian - ru_RU</option>
+                                    <option value="ja_JP">Japanese - ja_JP</option>
+                                    <option value="ko_KR">Korean - ko_KR</option>
+                                    <option value="zh_CN">Chinese (Simplified) - zh_CN</option>
+                                    <option value="zh_TW">Chinese (Traditional) - zh_TW</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="batch_size">Batch Size</label>
+                                <input type="number" id="batch_size" name="batch_size" value="32" min="1" max="128">
+                            </div>
+                            <div class="form-group">
+                                <label for="ckpt_path">Checkpoint Path (optional)</label>
+                                <div class="input-group">
+                                    <input type="text" id="ckpt_path" name="ckpt_path" 
+                                           value="https://huggingface.co/datasets/rhasspy/piper-checkpoints/resolve/main/en/en_US/lessac/medium/epoch%3D2164-step%3D1355540.ckpt"
+                                           placeholder="URL or local path to checkpoint">
+                                    <div class="checkpoint-upload-container">
+                                        <input type="file" id="checkpoint_file_input" accept=".ckpt" style="display: none;" onchange="uploadCheckpointFile()">
+                                        <button type="button" class="btn-upload-small" onclick="document.getElementById('checkpoint_file_input').click()">📁 Upload</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="training-buttons">
+                            <button type="submit" class="btn" id="startTrainingBtn">🚀 Start Training</button>
+                            <button type="button" class="btn btn-danger" id="stopTrainingBtn" disabled onclick="stopTraining()">🛑 Stop Training</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Status Tab -->
+            <div id="status" class="tab-content">
+                <h2>Training Status</h2>
+                
+                <!-- Training Status Card -->
+                <div class="status-card">
+                    <h3>Current Status</h3>
+                    <p id="statusText">
+                        <span class="status-indicator status-idle"></span>
+                        Ready to train
+                    </p>
+                    <div id="progressContainer" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Information Card -->
+                <div class="status-card">
+                    <h3>🖥️ System Information</h3>
+                    <div id="systemInfo" class="system-info">
+                        <div class="system-loading">Loading system information...</div>
+                    </div>
+                </div>
+                
+                <div id="logContainer" style="display: none;">
+                    <h3>Training Logs</h3>
+                    <div class="log-viewer" id="logViewer">Loading logs...</div>
+                    <button class="btn btn-secondary" onclick="refreshLogs()">🔄 Refresh Logs</button>
+                </div>
+            </div>
+            
+            <!-- Export Tab -->
+            <div id="export" class="tab-content">
+                <h2>Export to ONNX</h2>
+                
+                <!-- Export Status Indicator -->
+                <div id="exportStatus" class="status-card" style="display: none; margin-bottom: 20px;">
+                    <div id="exportStatusContent">
+                        <!-- Status content will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <form id="exportForm">
+                    <div class="form-group">
+                        <label for="checkpoint_select">Select Checkpoint</label>
+                        <select id="checkpoint_select" name="checkpoint_path" required>
+                            <option value="">Loading checkpoints...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="export_voice_name">Voice Name (Session)</label>
+                        <select id="export_voice_name" name="voice_name" required onchange="updateOutputName()">
+                            <option value="">Loading voice names...</option>
+                        </select>
+                        <div class="form-help">Select a voice session to determine where the ONNX file will be saved (datasets/[voice_name]/models/)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="export_espeak_voice">eSpeak Voice</label>
+                        <select id="export_espeak_voice" name="espeak_voice" required onchange="updateOutputName()">
+                            <option value="">Select eSpeak voice...</option>
+                            <option value="en_US">English (US) - en_US</option>
+                            <option value="en_GB">English (UK) - en_GB</option>
+                            <option value="en_AU">English (Australia) - en_AU</option>
+                            <option value="en_CA">English (Canada) - en_CA</option>
+                            <option value="en_IN">English (India) - en_IN</option>
+                            <option value="de_DE">German - de_DE</option>
+                            <option value="fr_FR">French - fr_FR</option>
+                            <option value="es_ES">Spanish - es_ES</option>
+                            <option value="it_IT">Italian - it_IT</option>
+                            <option value="pt_BR">Portuguese (Brazil) - pt_BR</option>
+                            <option value="pt_PT">Portuguese (Portugal) - pt_PT</option>
+                            <option value="ru_RU">Russian - ru_RU</option>
+                            <option value="ja_JP">Japanese - ja_JP</option>
+                            <option value="ko_KR">Korean - ko_KR</option>
+                            <option value="zh_CN">Chinese (Simplified) - zh_CN</option>
+                            <option value="zh_TW">Chinese (Traditional) - zh_TW</option>
+                        </select>
+                        <div class="form-help">Select the eSpeak voice that matches your training data</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="output_name">Output Model Name</label>
+                        <input type="text" id="output_name" name="output_name" required 
+                               placeholder="e.g., en_US-shart-medium.onnx">
+                        <div class="form-help">Auto-generated based on eSpeak voice and voice name. Format: [eSpeak Voice]-[Voice Name]-medium.onnx (e.g., en_US-shart-medium.onnx)</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">📦 Export to ONNX</button>
+                </form>
+            </div>
+            
+            <!-- Files Tab -->
+            <div id="files" class="tab-content">
+                <h2>File Management</h2>
+                
+                <h3>Checkpoints</h3>
+                <div class="file-list" id="checkpointsList">
+                    <div class="file-item">
+                        <div class="file-info">Loading checkpoints...</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px;">ONNX Models</h3>
+                <div class="file-list" id="modelsList">
+                    <div class="file-item">
+                        <div class="file-info">Loading models...</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px;">Training Logs</h3>
+                <div class="file-list" id="logsList">
+                    <div class="file-item">
+                        <div class="file-info">Loading logs...</div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- TensorBoard Tab -->
+            <div id="tensorboard" class="tab-content">
+                <h2>TensorBoard Visualization</h2>
+                
+                <div class="status-card">
+                    <div id="tensorboardStatus">
+                        <div class="system-loading">Loading TensorBoard status...</div>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button class="btn btn-sm btn-success" id="startTensorboardBtn" onclick="startTensorBoard()">🚀 Start TensorBoard</button>
+                        <button class="btn btn-sm btn-danger" id="stopTensorboardBtn" onclick="stopTensorBoard()" disabled style="margin-left: 10px;">🛑 Stop TensorBoard</button>
+                        <a class="btn btn-sm btn-secondary" id="openTensorboardBtn" href="http://localhost:6006" target="_blank" style="margin-left: 10px; display: none;">📊 Open TensorBoard</a>
+                    </div>
+                </div>
+                
+                <div class="info-card" style="margin-top: 20px;">
+                    <h4>About TensorBoard</h4>
+                    <p>TensorBoard provides visualization tools for machine learning experimentation:</p>
+                    <ul>
+                        <li><strong>Scalars</strong>: Track loss, learning rate, and other metrics over time</li>
+                        <li><strong>Images</strong>: View spectrograms and training visualizations</li>
+                        <li><strong>Audio</strong>: Listen to generated audio samples during training</li>
+                        <li><strong>Histograms</strong>: Monitor weight and gradient distributions</li>
+                    </ul>
+                    <p><em>Start TensorBoard before beginning training to capture all metrics from the beginning.</em></p>
+                </div>
+            </div>
+            
+            <!-- Tools Tab -->
+            <div id="tools" class="tab-content">
+                <h2>Audio Processing Tools</h2>
+                
+                <!-- Audio Conversion Section -->
+                <div class="form-group">
+                    <h3>Audio Conversion</h3>
+                    <p>Convert audio files to the required sample rate for training.</p>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>Upload Audio Files:</label>
+                            <input type="file" id="audioConversionFiles" multiple accept="audio/*" onchange="handleAudioConversionFiles()">
+                            <div class="form-help">Select multiple audio files to convert</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>Target Sample Rate:</label>
+                            <select id="targetSampleRate" class="form-control">
+                                <option value="22050">22050 Hz</option>
+                            </select>
+                            <div class="form-help">Sample rate for the converted audio</div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 20px 0;">
+                        <button class="btn btn-primary" id="convertAudioBtn" onclick="convertAudio()" disabled>
+                            🔄 Convert Audio Files
+                        </button>
+                    </div>
+                    
+                    <div id="conversionStatus" style="margin-top: 15px;"></div>
+                    
+                    <div id="convertedAudioList" style="margin-top: 20px; display: none;">
+                        <h4>Converted Audio Files:</h4>
+                        <div class="file-list" id="convertedFiles"></div>
+                        
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn btn-success" id="moveToTrainingBtn" onclick="moveAudioToTraining()" disabled>
+                                📁 Move Audio to Training Data
+                            </button>
+                        </div>
+                        <div class="form-help" style="text-align: center; margin-top: 10px;">
+                            This will move converted files to the current voice session's audio folder
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Checkpoint Testing Section -->
+                <div class="form-group" style="margin-top: 40px;">
+                    <h3>Checkpoint Testing</h3>
+                    <p>Test your trained models with text-to-speech synthesis.</p>
+                    
+                    <div class="info-card" style="margin-bottom: 20px;">
+                        <h4>📁 File Locations</h4>
+                        <p><strong>ONNX Models:</strong> Look in <code>datasets/[Voice Name]/models/</code> directory</p>
+                        <p><strong>JSON Configs:</strong> Look in <code>datasets/[Voice Name]/models/</code> directory (files ending with <code>.onnx.json</code>)</p>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>ONNX Model File:</label>
+                            <input type="file" id="onnxModelFile" accept=".onnx" onchange="handleOnnxModelFile()">
+                            <div class="form-help">Select an exported ONNX model file from datasets/[Voice Name]/models/</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>JSON Config File:</label>
+                            <input type="file" id="jsonConfigFile" accept=".json" onchange="handleJsonConfigFile()">
+                            <div class="form-help">Select the corresponding .onnx.json config file from datasets/[Voice Name]/models/</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label>Test Text:</label>
+                            <textarea id="testText" class="form-control" rows="3" placeholder="Enter text to synthesize...">Hello, this is a test of the voice model.</textarea>
+                            <div class="form-help">Enter the text you want to convert to speech</div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 20px 0;">
+                        <button class="btn btn-primary" id="synthesizeBtn" onclick="synthesizeText()" disabled>
+                            🎵 Synthesize Speech
+                        </button>
+                    </div>
+                    
+                    <div id="synthesisStatus" style="margin-top: 15px;"></div>
+                    
+                    <div id="audioOutput" style="margin-top: 20px; display: none;">
+                        <h4>Generated Audio:</h4>
+                        <audio id="synthesizedAudio" controls style="width: 100%;">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div style="text-align: center; margin-top: 10px;">
+                            <a id="downloadAudioBtn" class="btn btn-sm btn-secondary" download="synthesized_audio.wav">
+                                💾 Download Audio
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Tab -->
+            <div id="chat" class="tab-content">
+        <h2>🤖 AI Chat with Voice Synthesis</h2>
+        
+        <!-- Model Selection Section -->
+        <div class="chat-config">
+            <h3>🔧 Model Configuration</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="llm_model_select">LLM Model</label>
+                    <select id="llm_model_select" onchange="updateLLMModelPath()">
+                        <option value="">Select LLM model...</option>
+                    </select>
+                    <div class="form-help">Choose an LLM model for AI responses</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="llm_model_upload">Upload LLM Model</label>
+                    <input type="file" id="llm_model_upload" accept=".gguf,.bin,.model" style="display: none;" onchange="uploadLLMModel()">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('llm_model_upload').click()">
+                        📁 Upload LLM Model
+                    </button>
+                    <div class="form-help">Upload a local LLM model file</div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="llm_model_url">Download LLM Model</label>
+                    <input type="text" id="llm_model_url" placeholder="Enter model URL..." class="form-control">
+                    <input type="text" id="llm_model_name" placeholder="Model name (optional)" class="form-control" style="margin-top: 5px;">
+                    <button type="button" class="btn btn-secondary" onclick="downloadLLMModel()">
+                        ⬇️ Download LLM Model
+                    </button>
+                    <div class="form-help">Download LLM model from URL</div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="voice_model_select">Voice Model (ONNX)</label>
+                    <select id="voice_model_select" onchange="updateVoiceModelPath()">
+                        <option value="">Select voice model...</option>
+                    </select>
+                    <div class="form-help">Choose a voice model for speech synthesis</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="voice_json_select">Voice Config (JSON)</label>
+                    <select id="voice_json_select" onchange="updateVoiceJsonPath()">
+                        <option value="">Select voice config...</option>
+                    </select>
+                    <div class="form-help">Choose the corresponding JSON config file</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Model Loading Section -->
+        <div class="model-loading-section">
+            <h3>🚀 Load Models for Chat</h3>
+            <div class="model-status">
+                <div class="model-status-item">
+                    <span id="llm-status" class="status-indicator status-idle"></span>
+                    <span>LLM Model: <span id="llm-status-text">Not loaded</span></span>
+                </div>
+                <div class="model-status-item">
+                    <span id="voice-status" class="status-indicator status-idle"></span>
+                    <span>Voice Model: <span id="voice-status-text">Not loaded</span></span>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="loadModelsBtn" onclick="loadModelsForChat()">
+                🔄 Load Models
+            </button>
+            <div id="modelLoadingStatus" class="loading-status"></div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="chat-interface" id="chatInterface" style="display: none;">
+            <h3>💬 Chat Interface</h3>
+            
+            <div class="chat-controls">
+                <button type="button" class="btn btn-secondary" onclick="clearChatHistory()">
+                    🗑️ Clear Chat
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="loadChatHistory()">
+                    📜 Load History
+                </button>
+                <div class="autoplay-toggle">
+                    <label class="switch">
+                        <input type="checkbox" id="autoplayToggle" onchange="toggleAutoplay()">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="autoplay-label">🔊 Autoplay Audio</span>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-welcome">
+                    <p>Welcome to the AI Chat! Select your LLM model and voice model above to start chatting.</p>
+                    <p>The AI will respond with text and speak its responses using your selected voice model.</p>
+                </div>
+            </div>
+            
+            <div class="chat-input-area">
+                <div class="form-group">
+                    <label for="chatInput">Your Message</label>
+                    <textarea id="chatInput" placeholder="Type your message here..." rows="3" class="form-control"></textarea>
+                    <button type="button" class="btn btn-primary" onclick="sendChatMessage()" id="sendChatBtn">
+                        💬 Send Message
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+        let statusInterval;
+        let logInterval;
+        
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Load data for specific tabs
+            if (tabName === 'export' || tabName === 'files') {
+                loadCheckpoints();
+                loadModels();
+            }
+            if (tabName === 'export') {
+                loadVoiceNames();
+            }
+            if (tabName === 'files') {
+                loadLogs();
+            }
+            if (tabName === 'tensorboard') {
+                loadTensorBoardStatus();
+            }
+            if (tabName === 'tools') {
+                updateMoveToTrainingButton();
+            }
+            if (tabName === 'chat') {
+                loadLLMModels();
+                loadVoiceModelsForChat();
+            }
+        }
+        
+        // Session creation
+        async function createSession() {
+            const voiceName = document.getElementById('voice_name').value.trim();
+            
+            if (!voiceName) {
+                showAlert('Please enter a voice name', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/create_session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ voice_name: voiceName })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Session created successfully!', 'success');
+                    document.getElementById('currentSessionName').textContent = voiceName;
+                    document.getElementById('uploadSection').style.display = 'block';
+                    document.getElementById('createSessionBtn').textContent = '✅ Session Created';
+                    document.getElementById('createSessionBtn').disabled = true;
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to create session: ' + error.message, 'error');
+            }
+        }
+        
+        // CSV file upload
+        async function uploadCSV() {
+            const voiceName = document.getElementById('voice_name').value.trim();
+            const fileInput = document.getElementById('csv_file');
+            const statusDiv = document.getElementById('csvStatus');
+            
+            if (!fileInput.files.length) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('voice_name', voiceName);
+            formData.append('csv_file', fileInput.files[0]);
+            
+            statusDiv.className = 'upload-status uploading';
+            statusDiv.textContent = 'Uploading CSV file...';
+            
+            try {
+                const response = await fetch('/upload_csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'upload-status success';
+                    statusDiv.textContent = '✅ CSV file uploaded successfully';
+                    checkTrainingReady();
+                } else {
+                    statusDiv.className = 'upload-status error';
+                    statusDiv.textContent = '❌ ' + result.error;
+                }
+            } catch (error) {
+                statusDiv.className = 'upload-status error';
+                statusDiv.textContent = '❌ Upload failed: ' + error.message;
+            }
+        }
+        
+        // Audio files upload
+        async function uploadAudio() {
+            const voiceName = document.getElementById('voice_name').value.trim();
+            const fileInput = document.getElementById('audio_files');
+            const statusDiv = document.getElementById('audioStatus');
+            
+            if (!fileInput.files.length) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('voice_name', voiceName);
+            
+            for (let file of fileInput.files) {
+                formData.append('audio_files', file);
+            }
+            
+            statusDiv.className = 'upload-status uploading';
+            statusDiv.textContent = `Uploading ${fileInput.files.length} audio files...`;
+            
+            try {
+                const response = await fetch('/upload_audio', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'upload-status success';
+                    let message = `✅ Uploaded ${result.files.length} audio files successfully`;
+                    
+                    // Add warnings if any
+                    if (result.warnings && result.warnings.length > 0) {
+                        message += `\n⚠️ Warnings:\n${result.warnings.join('\n')}`;
+                    }
+                    
+                    statusDiv.textContent = message;
+                    checkTrainingReady();
+                } else {
+                    statusDiv.className = 'upload-status error';
+                    statusDiv.textContent = '❌ ' + result.error;
+                }
+            } catch (error) {
+                statusDiv.className = 'upload-status error';
+                statusDiv.textContent = '❌ Upload failed: ' + error.message;
+            }
+        }
+        
+        // Check if training is ready
+        function checkTrainingReady() {
+            const csvStatus = document.getElementById('csvStatus');
+            const audioStatus = document.getElementById('audioStatus');
+            
+            if (csvStatus.classList.contains('success') && audioStatus.classList.contains('success')) {
+                document.getElementById('trainingForm').style.display = 'block';
+                showAlert('✅ Ready for training! Configure settings below and start training.', 'success');
+            }
+        }
+        
+        // Training form submission
+        document.getElementById('trainingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            data.voice_name = document.getElementById('voice_name').value.trim();
+            
+            const startTrainingBtn = document.getElementById('startTrainingBtn');
+            const ckptPath = data.ckpt_path || '';
+            
+            try {
+                // Disable button and show appropriate loading message
+                if (startTrainingBtn) {
+                    startTrainingBtn.disabled = true;
+                    startTrainingBtn.style.opacity = '0.6';
+                    
+                    if (ckptPath.startsWith('http')) {
+                        startTrainingBtn.innerHTML = '⏳ Downloading Checkpoint...';
+                        showAlert('Downloading checkpoint and starting training...', 'info');
+                    } else {
+                        startTrainingBtn.innerHTML = '⏳ Starting Training...';
+                        showAlert('Starting training...', 'info');
+                    }
+                }
+                
+                const response = await fetch('/train', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Training started successfully!', 'success');
+                    showTab('status');
+                    startStatusUpdates();
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to start training: ' + error.message, 'error');
+            } finally {
+                // Re-enable button
+                if (startTrainingBtn) {
+                    startTrainingBtn.disabled = false;
+                    startTrainingBtn.style.opacity = '1';
+                    startTrainingBtn.innerHTML = '🚀 Start Training';
+                }
+            }
+        });
+        
+        // Export form submission
+        document.getElementById('exportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Get the export button and disable it during export
+            const exportBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '🔄 Exporting...';
+            
+            // Show export status
+            const exportStatus = document.getElementById('exportStatus');
+            const exportStatusContent = document.getElementById('exportStatusContent');
+            exportStatus.style.display = 'block';
+            exportStatusContent.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="spinner"></div>
+                    <div>
+                        <strong>🔄 Exporting ONNX Model...</strong><br>
+                        <small>Converting checkpoint to ONNX format. This may take a few minutes.</small>
+                    </div>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/export', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Show detailed success message
+                    let successMessage = `✅ Export completed successfully!<br>`;
+                    successMessage += `📁 Output: ${result.output_path}`;
+                    
+                    if (result.json_config_created) {
+                        successMessage += `<br>📄 Config: ${result.json_config_path}`;
+                    }
+                    
+                    // Update status indicator
+                    exportStatusContent.innerHTML = `
+                        <div style="color: #28a745;">
+                            <strong>✅ Export Completed Successfully!</strong><br>
+                            <small>📁 Output: ${result.output_path}</small>
+                            ${result.json_config_created ? `<br><small>📄 Config: ${result.json_config_path}</small>` : ''}
+                        </div>
+                    `;
+                    
+                    showAlert(successMessage, 'success');
+                    loadModels(); // Refresh models list
+                    
+                    // Clear the form
+                    e.target.reset();
+                    
+                    // Hide status after 5 seconds
+                    setTimeout(() => {
+                        exportStatus.style.display = 'none';
+                    }, 5000);
+                } else {
+                    // Update status indicator with error
+                    exportStatusContent.innerHTML = `
+                        <div style="color: #dc3545;">
+                            <strong>❌ Export Failed</strong><br>
+                            <small>${result.error}</small>
+                        </div>
+                    `;
+                    
+                    showAlert(`❌ Export failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                // Update status indicator with error
+                exportStatusContent.innerHTML = `
+                    <div style="color: #dc3545;">
+                        <strong>❌ Export Failed</strong><br>
+                        <small>${error.message}</small>
+                    </div>
+                `;
+                
+                showAlert(`❌ Export failed: ${error.message}`, 'error');
+            } finally {
+                // Re-enable the button
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalText;
+            }
+        });
+        
+        // Status updates
+        function startStatusUpdates() {
+            if (statusInterval) clearInterval(statusInterval);
+            
+            statusInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/status');
+                    const status = await response.json();
+                    updateStatus(status);
+                } catch (error) {
+                    console.error('Failed to fetch status:', error);
+                }
+            }, 2000);
+        }
+        
+        function updateStatus(status) {
+            const statusText = document.getElementById('statusText');
+            const logContainer = document.getElementById('logContainer');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            
+            // Update training button states
+            updateTrainingButtons(status.is_training);
+            
+            if (status.is_training) {
+                const progress = status.progress || {epoch: 0, step: 0, progress_percent: 0, eta_minutes: null, steps_per_second: 0};
+                
+                // Build status text with ETA information
+                let statusHtml = `
+                    <span class="status-indicator status-training"></span>
+                    Training "${status.current_job}" - Epoch ${progress.epoch}, Step ${progress.step}
+                `;
+                
+                // Add ETA and speed information if available
+                if (progress.eta_minutes !== null && progress.eta_minutes > 0) {
+                    const hours = Math.floor(progress.eta_minutes / 60);
+                    const minutes = Math.floor(progress.eta_minutes % 60);
+                    const etaText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                    statusHtml += `<br><small>ETA: ${etaText} (${progress.steps_per_second} steps/sec)</small>`;
+                } else if (progress.steps_per_second > 0) {
+                    statusHtml += `<br><small>Speed: ${progress.steps_per_second} steps/sec</small>`;
+                }
+                
+                statusText.innerHTML = statusHtml;
+                
+                // Show and update progress bar
+                if (progress.progress_percent > 0) {
+                    progressContainer.style.display = 'block';
+                    progressFill.style.width = `${progress.progress_percent}%`;
+                    
+                    // Add progress percentage text to progress bar
+                    progressFill.textContent = `${progress.progress_percent}%`;
+                    progressFill.style.textAlign = 'center';
+                    progressFill.style.lineHeight = '8px';
+                    progressFill.style.fontSize = '12px';
+                    progressFill.style.color = 'white';
+                    progressFill.style.textShadow = '1px 1px 1px rgba(0,0,0,0.5)';
+                } else {
+                    progressContainer.style.display = 'none';
+                }
+                
+                if (status.log_file) {
+                    logContainer.style.display = 'block';
+                    if (!logInterval) {
+                        startLogUpdates(status.log_file);
+                    }
+                }
+            } else {
+                // Check for errors
+                if (status.error) {
+                    statusText.innerHTML = `
+                        <span class="status-indicator status-error"></span>
+                        Training failed: ${status.error}
+                    `;
+                } else {
+                    statusText.innerHTML = `
+                        <span class="status-indicator status-idle"></span>
+                        Ready to train
+                    `;
+                }
+                progressContainer.style.display = 'none';
+                logContainer.style.display = 'none';
+                if (logInterval) {
+                    clearInterval(logInterval);
+                    logInterval = null;
+                }
+            }
+        }
+        
+        // Load system information
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch('/system_info');
+                const data = await response.json();
+                displaySystemInfo(data);
+            } catch (error) {
+                console.error('Failed to load system info:', error);
+                document.getElementById('systemInfo').innerHTML = `
+                    <div class="system-loading">Failed to load system information</div>
+                `;
+            }
+        }
+        
+        function displaySystemInfo(data) {
+            const { system, optimal_settings, recommendations, warnings } = data;
+            
+            const systemInfoDiv = document.getElementById('systemInfo');
+            
+            // Display warnings if any
+            let warningsHtml = '';
+            if (warnings && warnings.length > 0) {
+                warningsHtml = `
+                    <div class="alert alert-warning" style="margin-bottom: 20px;">
+                        <strong>Memory Warnings:</strong><br>
+                        ${warnings.map(warning => `• ${warning}`).join('<br>')}
+                    </div>
+                `;
+            }
+            systemInfoDiv.innerHTML = `
+                ${warningsHtml}
+                <div class="system-grid">
+                    <div class="system-section">
+                        <h4>🖥️ Hardware</h4>
+                        <div class="system-detail">
+                            <span class="label">CPU Cores</span>
+                            <span class="value">${system.cpu_count} (${system.cpu_count_physical} physical)</span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Memory</span>
+                            <span class="value">${system.memory_used_gb}/${system.memory_gb} GB (${system.memory_percent}%)</span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Platform</span>
+                            <span class="value">${system.platform}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="system-section">
+                        <h4>🚀 GPU</h4>
+                        ${system.gpu_available ? `
+                            <div class="system-detail">
+                                <span class="label">GPU</span>
+                                <span class="value">${system.gpu_names[0]}</span>
+                            </div>
+                            <div class="system-detail">
+                                <span class="label">VRAM</span>
+                                <span class="value">${system.gpu_memory_used_gb}/${system.gpu_memory_gb} GB (${system.gpu_memory_percent}%)</span>
+                            </div>
+                            <div class="system-detail">
+                                <span class="label">Count</span>
+                                <span class="value">${system.gpu_count} GPU${system.gpu_count > 1 ? 's' : ''}</span>
+                            </div>
+                        ` : `
+                            <div class="system-detail">
+                                <span class="label">Status</span>
+                                <span class="value">No GPU detected</span>
+                            </div>
+                        `}
+                    </div>
+                    
+                    <div class="system-section">
+                        <h4>⚙️ Optimal Settings</h4>
+                        <div class="system-detail">
+                            <span class="label">Batch Size</span>
+                            <span class="value">${optimal_settings.batch_size}</span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Num Workers</span>
+                            <span class="value">${optimal_settings.num_workers}</span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Precision</span>
+                            <span class="value">${optimal_settings.precision}</span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Devices</span>
+                            <span class="value">${optimal_settings.devices}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="system-section">
+                        <h4>📊 Performance</h4>
+                        <div class="system-detail">
+                            <span class="label">Level</span>
+                            <span class="value">
+                                <span class="performance-badge performance-${recommendations.performance_level}">
+                                    ${recommendations.performance_level}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Training Speed</span>
+                            <span class="value">${recommendations.expected_training_speed}</span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Multi-GPU Ready</span>
+                            <span class="value">${recommendations.multi_gpu_ready ? '✅' : '❌'}</span>
+                        </div>
+                        <div class="system-detail">
+                            <span class="label">Memory Sufficient</span>
+                            <span class="value">${recommendations.memory_sufficient ? '✅' : '❌'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Memory & Cache Management -->
+                <div style="text-align: center; margin-top: 15px;">
+                    ${system.gpu_available ? `
+                        <button class="btn btn-sm btn-secondary" onclick="clearGpuMemory()">🧹 Clear GPU Memory</button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-secondary" onclick="cleanupCache()" style="margin-left: 10px;">🗑️ Cleanup Cache</button>
+                </div>
+            `;
+        }
+        
+        function startLogUpdates(logFile) {
+            if (logInterval) clearInterval(logInterval);
+            
+            logInterval = setInterval(() => {
+                refreshLogs();
+            }, 3000);
+            
+            refreshLogs(); // Initial load
+        }
+        
+        async function refreshLogs() {
+            const logViewer = document.getElementById('logViewer');
+            
+            try {
+                const response = await fetch('/status');
+                const status = await response.json();
+                
+                if (status.log_file) {
+                    const logResponse = await fetch(`/logs/${status.log_file.split('/').pop()}`);
+                    const logContent = await logResponse.text();
+                    
+                    logViewer.textContent = logContent;
+                    logViewer.scrollTop = logViewer.scrollHeight;
+                }
+            } catch (error) {
+                logViewer.textContent = 'Failed to load logs: ' + error.message;
+            }
+        }
+        
+        // Load checkpoints
+        async function loadCheckpoints() {
+            try {
+                const response = await fetch('/checkpoints');
+                const checkpoints = await response.json();
+                
+                const select = document.getElementById('checkpoint_select');
+                const list = document.getElementById('checkpointsList');
+                
+                // Update select options
+                select.innerHTML = '<option value="">Select a checkpoint...</option>';
+                checkpoints.forEach(ckpt => {
+                    const option = document.createElement('option');
+                    option.value = ckpt.path;
+                    option.textContent = ckpt.name;
+                    select.appendChild(option);
+                });
+                
+                // Update file list
+                if (checkpoints.length === 0) {
+                    list.innerHTML = '<div class="file-item"><div class="file-info">No checkpoints found</div></div>';
+                } else {
+                    list.innerHTML = checkpoints.map(ckpt => `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <div class="file-name">${ckpt.name}</div>
+                                <div class="file-meta">
+                                    Size: ${formatFileSize(ckpt.size)} | 
+                                    Modified: ${new Date(ckpt.modified).toLocaleString()}
+                                </div>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/download/${ckpt.path}" class="btn btn-sm btn-secondary">📥 Download</a>
+                                <button class="btn btn-sm btn-danger" onclick="deleteFile('${ckpt.path}')">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load checkpoints:', error);
+            }
+        }
+        
+        // Load voice names
+        async function loadVoiceNames() {
+            try {
+                const response = await fetch('/voice_names');
+                const voiceNames = await response.json();
+                
+                const select = document.getElementById('export_voice_name');
+                
+                // Update select options
+                select.innerHTML = '<option value="">Select a voice session...</option>';
+                voiceNames.forEach(voiceName => {
+                    const option = document.createElement('option');
+                    option.value = voiceName;
+                    option.textContent = voiceName;
+                    select.appendChild(option);
+                });
+                
+                if (voiceNames.length === 0) {
+                    select.innerHTML = '<option value="">No voice sessions found</option>';
+                }
+            } catch (error) {
+                console.error('Failed to load voice names:', error);
+                const select = document.getElementById('export_voice_name');
+                select.innerHTML = '<option value="">Error loading voice names</option>';
+            }
+        }
+        
+        // Update output name based on eSpeak voice and voice name selections
+        function updateOutputName() {
+            const espeakVoiceSelect = document.getElementById('export_espeak_voice');
+            const voiceNameSelect = document.getElementById('export_voice_name');
+            const outputNameField = document.getElementById('output_name');
+            
+            // Get the selected option's value directly
+            const espeakVoice = espeakVoiceSelect.value;
+            const voiceName = voiceNameSelect.value;
+            
+            console.log('eSpeak Voice Select Value:', espeakVoice); // Debug log
+            console.log('Voice Name Select Value:', voiceName); // Debug log
+            console.log('eSpeak Voice Select Options:', Array.from(espeakVoiceSelect.options).map(opt => `${opt.value} -> ${opt.textContent}`)); // Debug log
+            
+            if (espeakVoice && voiceName) {
+                // Ensure proper format: en_US-shart-medium.onnx (with underscore and capitals)
+                const generatedName = `${espeakVoice}-${voiceName}-medium.onnx`;
+                console.log('Generated Name:', generatedName); // Debug log
+                
+                // Set the value multiple ways to ensure it takes effect
+                outputNameField.value = generatedName;
+                outputNameField.setAttribute('value', generatedName);
+                
+                // Force a re-render by temporarily changing and restoring
+                const originalValue = outputNameField.value;
+                outputNameField.value = '';
+                setTimeout(() => {
+                    outputNameField.value = originalValue;
+                }, 10);
+                
+                console.log('Final output field value:', outputNameField.value); // Debug log
+            } else {
+                outputNameField.value = '';
+                outputNameField.setAttribute('value', '');
+            }
+        }
+        
+        // Load models
+        async function loadModels() {
+            try {
+                const response = await fetch('/models');
+                const models = await response.json();
+                
+                const list = document.getElementById('modelsList');
+                
+                if (models.length === 0) {
+                    list.innerHTML = '<div class="file-item"><div class="file-info">No models found</div></div>';
+                } else {
+                    list.innerHTML = models.map(model => `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <div class="file-name">${model.name}</div>
+                                <div class="file-meta">
+                                    Size: ${formatFileSize(model.size)} | 
+                                    Modified: ${new Date(model.modified).toLocaleString()}
+                                    ${model.config_path ? ' | Config available' : ''}
+                                </div>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/download/${model.path}" class="btn btn-sm btn-success">📥 Download .onnx</a>
+                                ${model.config_path ? `<a href="/download/${model.config_path}" class="btn btn-sm btn-secondary">📄 Download .json</a>` : ''}
+                                <button class="btn btn-sm btn-danger" onclick="deleteFile('${model.path}')">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load models:', error);
+            }
+        }
+        
+        // File/Directory browsing functions
+        async function browseFile(inputId) {
+            try {
+                const response = await fetch('/browse/file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_path: document.getElementById(inputId).value || ''
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok && result.path) {
+                    document.getElementById(inputId).value = result.path;
+                } else {
+                    // Fallback to manual input
+                    const path = prompt('Enter file path:', document.getElementById(inputId).value || '');
+                    if (path) {
+                        document.getElementById(inputId).value = path;
+                    }
+                }
+            } catch (error) {
+                // Fallback to manual input
+                const path = prompt('Enter file path:', document.getElementById(inputId).value || '');
+                if (path) {
+                    document.getElementById(inputId).value = path;
+                }
+            }
+        }
+        
+        async function browseDirectory(inputId) {
+            try {
+                const response = await fetch('/browse/directory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_path: document.getElementById(inputId).value || ''
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok && result.path) {
+                    document.getElementById(inputId).value = result.path;
+                } else {
+                    // Fallback to manual input
+                    const path = prompt('Enter directory path:', document.getElementById(inputId).value || '');
+                    if (path) {
+                        document.getElementById(inputId).value = path;
+                    }
+                }
+            } catch (error) {
+                // Fallback to manual input
+                const path = prompt('Enter directory path:', document.getElementById(inputId).value || '');
+                if (path) {
+                    document.getElementById(inputId).value = path;
+                }
+            }
+        }
+        
+        // Stop training function
+        async function stopTraining() {
+            if (!confirm('Are you sure you want to stop the current training?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/stop_training', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showAlert(result.message, 'success');
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to stop training: ' + error.message, 'danger');
+            }
+        }
+        
+
+        
+
+        
+        // Format file size helper function
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Upload checkpoint file function
+        async function uploadCheckpointFile() {
+            const fileInput = document.getElementById('checkpoint_file_input');
+            const file = fileInput.files[0];
+            const startTrainingBtn = document.getElementById('startTrainingBtn');
+            
+            if (!file) {
+                showAlert('No file selected', 'warning');
+                return;
+            }
+            
+            if (!file.name.toLowerCase().endsWith('.ckpt')) {
+                showAlert('Please select a .ckpt file', 'warning');
+                return;
+            }
+            
+            const voiceName = document.getElementById('voice_name').value || 'unknown';
+            const formData = new FormData();
+            formData.append('checkpoint', file);
+            formData.append('voice_name', voiceName);
+            
+            try {
+                // Show upload status and make button non-clickable
+                if (startTrainingBtn) {
+                    startTrainingBtn.disabled = true;
+                    startTrainingBtn.style.opacity = '0.6';
+                    startTrainingBtn.style.cursor = 'not-allowed';
+                    startTrainingBtn.innerHTML = '⏳ Uploading Checkpoint...';
+                }
+                
+                showAlert('Uploading checkpoint file...', 'info');
+                
+                const response = await fetch('/upload_checkpoint', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.path) {
+                    document.getElementById('ckpt_path').value = result.path;
+                    showAlert(result.message, 'success');
+                } else if (result.error) {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Upload failed: ' + error.message, 'danger');
+            } finally {
+                // Re-enable start training button after upload
+                if (startTrainingBtn) {
+                    startTrainingBtn.disabled = false;
+                    startTrainingBtn.style.opacity = '1';
+                    startTrainingBtn.style.cursor = 'pointer';
+                    startTrainingBtn.innerHTML = '🚀 Start Training';
+                }
+            }
+            
+            // Clear the file input
+            fileInput.value = '';
+        }
+        
+        // Load logs function
+        async function loadLogs() {
+            try {
+                const response = await fetch('/logs');
+                const logs = await response.json();
+                
+                const list = document.getElementById('logsList');
+                
+                if (logs.length === 0) {
+                    list.innerHTML = '<div class="file-item"><div class="file-info">No log files found</div></div>';
+                } else {
+                    list.innerHTML = logs.map(log => `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <div class="file-name">${log.name}</div>
+                                <div class="file-meta">
+                                    Size: ${formatFileSize(log.size)} | 
+                                    Modified: ${new Date(log.modified).toLocaleString()}
+                                </div>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/download/${log.path}" class="btn btn-sm btn-secondary">📥 Download</a>
+                                <button class="btn btn-sm btn-danger" onclick="deleteFile('${log.path}')">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load logs:', error);
+            }
+        }
+        
+        // Delete file function
+        async function deleteFile(filePath) {
+            if (!confirm(`Are you sure you want to delete ${filePath.split('/').pop()}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/delete_file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_path: filePath
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showAlert(result.message, 'success');
+                    refreshFiles(); // Refresh the file lists
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to delete file: ' + error.message, 'danger');
+            }
+        }
+        
+        // Refresh files function
+        function refreshFiles() {
+            loadCheckpoints();
+            loadModels();
+            loadLogs();
+        }
+        
+        // Update status function to handle training button states
+        function updateTrainingButtons(isTraining) {
+            const startBtn = document.getElementById('startTrainingBtn');
+            const stopBtn = document.getElementById('stopTrainingBtn');
+            
+            if (isTraining) {
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.6';
+                stopBtn.disabled = false;
+                stopBtn.style.opacity = '1';
+            } else {
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                stopBtn.disabled = true;
+                stopBtn.style.opacity = '0.6';
+            }
+        }
+
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            const content = document.querySelector('.content');
+            content.insertBefore(alert, content.firstChild);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+        
+        // Clear GPU Memory function
+        async function clearGpuMemory() {
+            try {
+                showAlert('Clearing GPU memory...', 'info');
+                
+                const response = await fetch('/clear_gpu_memory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert(`${result.message} - Freed ${result.memory_freed_gb}GB`, 'success');
+                    // Refresh system info to show updated memory usage
+                    loadSystemInfo();
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to clear GPU memory: ' + error.message, 'danger');
+            }
+        }
+
+        // Cleanup Cache function
+        async function cleanupCache() {
+            try {
+                showAlert('Cleaning up cache directories...', 'info');
+                
+                const response = await fetch('/cleanup_cache', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    if (result.files_removed > 0) {
+                        showAlert(`${result.message} - Removed ${result.files_removed} files (${result.gb_removed}GB)`, 'success');
+                    } else {
+                        showAlert('Cache cleanup completed - No files needed removal', 'info');
+                    }
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to cleanup cache: ' + error.message, 'danger');
+            }
+        }
+
+        // TensorBoard functions
+        async function startTensorBoard() {
+            try {
+                showAlert('Starting TensorBoard...', 'info');
+                
+                const response = await fetch('/start_tensorboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert(result.message, 'success');
+                    loadTensorBoardStatus();
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to start TensorBoard: ' + error.message, 'danger');
+            }
+        }
+
+        async function stopTensorBoard() {
+            try {
+                showAlert('Stopping TensorBoard...', 'info');
+                
+                const response = await fetch('/stop_tensorboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert(result.message, 'success');
+                    loadTensorBoardStatus();
+                } else {
+                    showAlert(result.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to stop TensorBoard: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadTensorBoardStatus() {
+            try {
+                const response = await fetch('/tensorboard_status');
+                const status = await response.json();
+                
+                const statusDiv = document.getElementById('tensorboardStatus');
+                const startBtn = document.getElementById('startTensorboardBtn');
+                const stopBtn = document.getElementById('stopTensorboardBtn');
+                const openBtn = document.getElementById('openTensorboardBtn');
+                
+                if (status.available) {
+                    if (status.is_running) {
+                        statusDiv.innerHTML = `
+                            <div style="color: #28a745; font-weight: bold;">
+                                ✅ TensorBoard is running on <a href="${status.url}" target="_blank">${status.url}</a>
+                            </div>
+                            <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                                Log directory: ${status.log_dir}
+                            </div>
+                        `;
+                        startBtn.disabled = true;
+                        stopBtn.disabled = false;
+                        openBtn.style.display = 'inline-block';
+                        openBtn.href = status.url;
+                    } else {
+                        statusDiv.innerHTML = `
+                            <div style="color: #6c757d;">
+                                ⭕ TensorBoard is not running
+                            </div>
+                            <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                                Log directory: ${status.log_dir}
+                            </div>
+                        `;
+                        startBtn.disabled = false;
+                        stopBtn.disabled = true;
+                        openBtn.style.display = 'none';
+                    }
+                } else {
+                    statusDiv.innerHTML = `
+                        <div style="color: #dc3545;">
+                            ❌ TensorBoard not available - Install with: pip install tensorboard
+                        </div>
+                    `;
+                    startBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    openBtn.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load TensorBoard status:', error);
+            }
+        }
+
+        // Audio conversion functions
+        let convertedAudioFiles = [];
+        
+        function handleAudioConversionFiles() {
+            const fileInput = document.getElementById('audioConversionFiles');
+            const convertBtn = document.getElementById('convertAudioBtn');
+            
+            if (fileInput.files.length > 0) {
+                convertBtn.disabled = false;
+                document.getElementById('conversionStatus').innerHTML = `
+                    <div class="info-card">
+                        <strong>${fileInput.files.length}</strong> audio files selected for conversion
+                    </div>
+                `;
+            } else {
+                convertBtn.disabled = true;
+                document.getElementById('conversionStatus').innerHTML = '';
+            }
+        }
+        
+        async function convertAudio() {
+            const fileInput = document.getElementById('audioConversionFiles');
+            const targetSampleRate = document.getElementById('targetSampleRate').value;
+            const convertBtn = document.getElementById('convertAudioBtn');
+            const statusDiv = document.getElementById('conversionStatus');
+            
+            if (fileInput.files.length === 0) {
+                showAlert('Please select audio files to convert', 'warning');
+                return;
+            }
+            
+            convertBtn.disabled = true;
+            convertBtn.innerHTML = '⏳ Converting...';
+            convertedAudioFiles = [];
+            
+            const formData = new FormData();
+            for (let file of fileInput.files) {
+                formData.append('audio_files', file);
+            }
+            formData.append('target_sample_rate', targetSampleRate);
+            
+            try {
+                statusDiv.innerHTML = `
+                    <div class="info-card">
+                        <div class="system-loading">Converting ${fileInput.files.length} audio files to ${targetSampleRate} Hz...</div>
+                    </div>
+                `;
+                
+                const response = await fetch('/convert_audio', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    convertedAudioFiles = result.converted_files;
+                    displayConvertedFiles(result.converted_files);
+                    showAlert(`Successfully converted ${result.converted_files.length} audio files`, 'success');
+                    updateMoveToTrainingButton();
+                } else {
+                    showAlert(result.error || 'Audio conversion failed', 'danger');
+                    statusDiv.innerHTML = `
+                        <div class="error-card">
+                            <strong>Conversion failed:</strong> ${result.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                showAlert('Failed to convert audio: ' + error.message, 'danger');
+                statusDiv.innerHTML = `
+                    <div class="error-card">
+                        <strong>Conversion failed:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                convertBtn.disabled = false;
+                convertBtn.innerHTML = '🔄 Convert Audio Files';
+            }
+        }
+        
+        function displayConvertedFiles(files) {
+            const listDiv = document.getElementById('convertedAudioList');
+            const filesDiv = document.getElementById('convertedFiles');
+            
+            let filesHtml = '';
+            files.forEach(file => {
+                filesHtml += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <strong>${file.filename}</strong>
+                            <div class="file-details">
+                                Size: ${formatFileSize(file.size)} | Sample Rate: ${file.sample_rate} Hz | Duration: ${file.duration}s
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            filesDiv.innerHTML = filesHtml;
+            listDiv.style.display = 'block';
+        }
+        
+        async function moveAudioToTraining() {
+            const voiceName = document.getElementById('voice_name').value.trim();
+            const moveBtn = document.getElementById('moveToTrainingBtn');
+            
+            if (!voiceName) {
+                showAlert('Please create a voice session first in the Training tab', 'warning');
+                return;
+            }
+            
+            if (convertedAudioFiles.length === 0) {
+                showAlert('No converted audio files to move', 'warning');
+                return;
+            }
+            
+            moveBtn.disabled = true;
+            moveBtn.innerHTML = '⏳ Moving Files...';
+            
+            try {
+                const response = await fetch('/move_converted_audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        voice_name: voiceName,
+                        converted_files: convertedAudioFiles
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert(`Successfully moved ${result.files_moved} audio files to training data`, 'success');
+                    
+                    // Update the training tab to show the uploaded files
+                    const audioStatus = document.getElementById('audioStatus');
+                    if (audioStatus) {
+                        audioStatus.innerHTML = `
+                            <div class="success-card">
+                                ✅ Uploaded ${result.files_moved} files successfully
+                            </div>
+                        `;
+                        // Add success class for training validation
+                        audioStatus.classList.add('success');
+                    }
+                    
+                    // Trigger the same validation as manual audio upload to show training controls
+                    checkTrainingReady();
+                    
+                    // Clear converted files list
+                    convertedAudioFiles = [];
+                    document.getElementById('convertedAudioList').style.display = 'none';
+                    document.getElementById('audioConversionFiles').value = '';
+                    document.getElementById('conversionStatus').innerHTML = '';
+                    
+                    updateMoveToTrainingButton();
+                } else {
+                    showAlert(result.error || 'Failed to move audio files', 'danger');
+                }
+            } catch (error) {
+                showAlert('Failed to move audio files: ' + error.message, 'danger');
+            } finally {
+                moveBtn.disabled = true; // Keep disabled until next conversion
+                moveBtn.innerHTML = '📁 Move Audio to Training Data';
+            }
+        }
+        
+        function updateMoveToTrainingButton() {
+            const moveBtn = document.getElementById('moveToTrainingBtn');
+            const voiceName = document.getElementById('voice_name').value.trim();
+            
+            if (moveBtn) {
+                const hasConvertedFiles = convertedAudioFiles.length > 0;
+                const hasVoiceSession = voiceName.length > 0;
+                
+                moveBtn.disabled = !(hasConvertedFiles && hasVoiceSession);
+                
+                if (!hasVoiceSession) {
+                    moveBtn.title = 'Create a voice session first in the Training tab';
+                } else if (!hasConvertedFiles) {
+                    moveBtn.title = 'Convert audio files first';
+                } else {
+                    moveBtn.title = 'Move converted files to training data';
+                }
+            }
+        }
+
+        // Checkpoint testing functions
+        let selectedOnnxModel = null;
+        let selectedJsonConfig = null;
+        
+        function handleOnnxModelFile() {
+            const fileInput = document.getElementById('onnxModelFile');
+            
+            if (fileInput.files.length > 0) {
+                selectedOnnxModel = fileInput.files[0];
+                updateSynthesizeButton();
+                
+                document.getElementById('synthesisStatus').innerHTML = `
+                    <div class="info-card">
+                        <strong>ONNX Model:</strong> ${selectedOnnxModel.name}
+                        ${selectedJsonConfig ? '<br><strong>JSON Config:</strong> ' + selectedJsonConfig.name : '<br><span style="color: #f39c12;">⚠️ JSON config file still needed</span>'}
+                    </div>
+                `;
+            } else {
+                selectedOnnxModel = null;
+                updateSynthesizeButton();
+            }
+        }
+
+        function handleJsonConfigFile() {
+            const fileInput = document.getElementById('jsonConfigFile');
+            
+            if (fileInput.files.length > 0) {
+                selectedJsonConfig = fileInput.files[0];
+                updateSynthesizeButton();
+                
+                document.getElementById('synthesisStatus').innerHTML = `
+                    <div class="info-card">
+                        ${selectedOnnxModel ? '<strong>ONNX Model:</strong> ' + selectedOnnxModel.name + '<br>' : '<span style="color: #f39c12;">⚠️ ONNX model file still needed</span><br>'}
+                        <strong>JSON Config:</strong> ${selectedJsonConfig.name}
+                    </div>
+                `;
+            } else {
+                selectedJsonConfig = null;
+                updateSynthesizeButton();
+            }
+        }
+
+        function updateSynthesizeButton() {
+            const synthesizeBtn = document.getElementById('synthesizeBtn');
+            const bothFilesSelected = selectedOnnxModel && selectedJsonConfig;
+            
+            synthesizeBtn.disabled = !bothFilesSelected;
+            
+            if (!selectedOnnxModel && !selectedJsonConfig) {
+                document.getElementById('synthesisStatus').innerHTML = '';
+            } else if (bothFilesSelected) {
+                document.getElementById('synthesisStatus').innerHTML = `
+                    <div class="success-card">
+                        ✅ Both files loaded and ready for testing<br>
+                        <strong>ONNX Model:</strong> ${selectedOnnxModel.name}<br>
+                        <strong>JSON Config:</strong> ${selectedJsonConfig.name}
+                    </div>
+                `;
+            }
+        }
+        
+        async function synthesizeText() {
+            const testText = document.getElementById('testText').value.trim();
+            const synthesizeBtn = document.getElementById('synthesizeBtn');
+            const statusDiv = document.getElementById('synthesisStatus');
+            
+            if (!selectedOnnxModel) {
+                showAlert('Please select an ONNX model file first', 'warning');
+                return;
+            }
+            
+            if (!selectedJsonConfig) {
+                showAlert('Please select the JSON config file', 'warning');
+                return;
+            }
+            
+            if (!testText) {
+                showAlert('Please enter text to synthesize', 'warning');
+                return;
+            }
+            
+            // Check if training is running
+            try {
+                const statusResponse = await fetch('/status');
+                const status = await statusResponse.json();
+                
+                if (status.is_training) {
+                    showAlert('Cannot test models while training is running (VRAM conflict)', 'warning');
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to check training status:', error);
+            }
+            
+            synthesizeBtn.disabled = true;
+            synthesizeBtn.innerHTML = '⏳ Synthesizing...';
+            
+            const formData = new FormData();
+            formData.append('onnx_model', selectedOnnxModel);
+            formData.append('json_config', selectedJsonConfig);
+            formData.append('text', testText);
+            
+            try {
+                statusDiv.innerHTML = `
+                    <div class="info-card">
+                        <div class="system-loading">Synthesizing "${testText.substring(0, 50)}${testText.length > 50 ? '...' : ''}"</div>
+                    </div>
+                `;
+                
+                const response = await fetch('/synthesize_text', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const audioUrl = URL.createObjectURL(blob);
+                    
+                    // Display audio player
+                    const audioOutput = document.getElementById('audioOutput');
+                    const audioElement = document.getElementById('synthesizedAudio');
+                    const downloadBtn = document.getElementById('downloadAudioBtn');
+                    
+                    audioElement.src = audioUrl;
+                    downloadBtn.href = audioUrl;
+                    downloadBtn.download = `synthesized_${Date.now()}.wav`;
+                    
+                    audioOutput.style.display = 'block';
+                    
+                    statusDiv.innerHTML = `
+                        <div class="success-card">
+                            ✅ Successfully synthesized audio from text
+                        </div>
+                    `;
+                    
+                    showAlert('Audio synthesized successfully!', 'success');
+                } else {
+                    const result = await response.json();
+                    let errorMessage = result.error || 'Unknown error';
+                    
+                    // Special handling for JSON config file errors
+                    if (result.requires_json) {
+                        errorMessage = `${result.error}<br><br><strong>Solution:</strong> Please upload both the ONNX model file and its corresponding JSON config file.`;
+                    }
+                    
+                    statusDiv.innerHTML = `
+                        <div class="error-card">
+                            <strong>Synthesis failed:</strong><br>${errorMessage}
+                            ${result.details ? '<br><br><em>' + result.details + '</em>' : ''}
+                        </div>
+                    `;
+                    showAlert(result.error || 'Synthesis failed', 'danger');
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="error-card">
+                        <strong>Synthesis failed:</strong> ${error.message}
+                    </div>
+                `;
+                showAlert('Failed to synthesize: ' + error.message, 'danger');
+            } finally {
+                synthesizeBtn.disabled = false;
+                synthesizeBtn.innerHTML = '🎵 Synthesize Speech';
+            }
+        }
+
+        // Save form values to session storage
+        function saveFormValues() {
+            const formData = {
+                voice_name: document.getElementById('voice_name')?.value || '',
+                espeak_voice: document.getElementById('training_espeak_voice')?.value || '',
+                batch_size: document.getElementById('batch_size')?.value || '',
+                ckpt_path: document.getElementById('ckpt_path')?.value || '',
+                export_voice_name: document.getElementById('export_voice_name')?.value || '',
+                export_espeak_voice: document.getElementById('export_espeak_voice')?.value || '',
+                output_name: document.getElementById('output_name')?.value || ''
+            };
+            sessionStorage.setItem('piperFormData', JSON.stringify(formData));
+        }
+        
+        // Restore form values from session storage
+        function restoreFormValues() {
+            try {
+                const formData = JSON.parse(sessionStorage.getItem('piperFormData') || '{}');
+                
+                if (formData.voice_name) document.getElementById('voice_name').value = formData.voice_name;
+                if (formData.espeak_voice) document.getElementById('training_espeak_voice').value = formData.espeak_voice;
+                if (formData.batch_size) document.getElementById('batch_size').value = formData.batch_size;
+                if (formData.ckpt_path) document.getElementById('ckpt_path').value = formData.ckpt_path;
+                if (formData.export_voice_name) document.getElementById('export_voice_name').value = formData.export_voice_name;
+                if (formData.export_espeak_voice) document.getElementById('export_espeak_voice').value = formData.export_espeak_voice;
+                if (formData.output_name) document.getElementById('output_name').value = formData.output_name;
+                
+                // Update output name if both export fields are filled
+                if (formData.export_voice_name && formData.export_espeak_voice) {
+                    updateOutputName();
+                }
+            } catch (error) {
+                console.error('Error restoring form values:', error);
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            startStatusUpdates();
+            loadSystemInfo();
+            loadVoiceNames(); // Load voice names for export dropdown
+            
+            // Restore form values from session storage
+            restoreFormValues();
+            
+            // Add event listeners to save form values on change
+            const formFields = [
+                'voice_name', 'training_espeak_voice', 'batch_size', 'ckpt_path',
+                'export_voice_name', 'export_espeak_voice', 'output_name'
+            ];
+            
+            formFields.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    element.addEventListener('change', saveFormValues);
+                    element.addEventListener('input', saveFormValues);
+                }
+            });
+        });
+
+        // Chat functionality
+        let currentChatSession = 'default';
+        let selectedLLMModel = '';
+        let selectedVoiceModel = '';
+        let selectedVoiceJson = '';
+
+        // Load LLM models
+        async function loadLLMModels() {
+            try {
+                const response = await fetch('/llm_models');
+                const result = await response.json();
+                
+                const select = document.getElementById('llm_model_select');
+                select.innerHTML = '<option value="">Select LLM model...</option>';
+                
+                if (result.models) {
+                    result.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.path;
+                        option.textContent = `${model.name} (${model.size_mb} MB)`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load LLM models:', error);
+            }
+        }
+
+        // Load voice models for chat
+        async function loadVoiceModelsForChat() {
+            try {
+                // Load ONNX models
+                const modelsResponse = await fetch('/models');
+                const modelsResult = await modelsResponse.json();
+                
+                // Load JSON configs
+                const configsResponse = await fetch('/voice_configs');
+                const configsResult = await configsResponse.json();
+                
+                const voiceSelect = document.getElementById('voice_model_select');
+                const jsonSelect = document.getElementById('voice_json_select');
+                
+                voiceSelect.innerHTML = '<option value="">Select voice model...</option>';
+                jsonSelect.innerHTML = '<option value="">Select voice config...</option>';
+                
+                // Populate ONNX models
+                if (modelsResult && modelsResult.length > 0) {
+                    modelsResult.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.path;
+                        option.textContent = `${model.session}/${model.name}`;
+                        voiceSelect.appendChild(option);
+                    });
+                }
+                
+                // Populate JSON configs
+                if (configsResult && configsResult.length > 0) {
+                    configsResult.forEach(config => {
+                        const option = document.createElement('option');
+                        option.value = config.path;
+                        option.textContent = `${config.session}/${config.name}`;
+                        jsonSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load voice models:', error);
+            }
+        }
+
+
+
+        // Update model status indicators
+        function updateModelStatus(modelType, status, text) {
+            const statusElement = document.getElementById(`${modelType}-status`);
+            const textElement = document.getElementById(`${modelType}-status-text`);
+            
+            statusElement.className = `status-indicator status-${status}`;
+            textElement.textContent = text;
+        }
+
+        // Show model loading status
+        function showModelLoadingStatus(message, type) {
+            const statusDiv = document.getElementById('modelLoadingStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `loading-status ${type}`;
+        }
+
+        // Load models for chat functionality
+        async function loadModelsForChat() {
+            const llmModelPath = document.getElementById('llm_model_select').value;
+            const voiceModelPath = document.getElementById('voice_model_select').value;
+            const voiceJsonPath = document.getElementById('voice_json_select').value;
+            
+            if (!llmModelPath) {
+                showModelLoadingStatus('Please select an LLM model first', 'error');
+                return;
+            }
+            
+            if (!voiceModelPath || !voiceJsonPath) {
+                showModelLoadingStatus('Please select both voice model and config files', 'error');
+                return;
+            }
+            
+            const loadBtn = document.getElementById('loadModelsBtn');
+            const statusDiv = document.getElementById('modelLoadingStatus');
+            
+            // Disable button and show loading
+            loadBtn.disabled = true;
+            loadBtn.textContent = '🔄 Loading Models...';
+            showModelLoadingStatus('Loading LLM and voice models...', 'loading');
+            
+            try {
+                // Load LLM model
+                showModelLoadingStatus('Loading LLM model...', 'loading');
+                updateModelStatus('llm', 'loading', 'Loading...');
+                
+                const llmResponse = await fetch('/load_llm_model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_path: llmModelPath })
+                });
+                
+                if (!llmResponse.ok) {
+                    throw new Error('Failed to load LLM model');
+                }
+                
+                const llmResult = await llmResponse.json();
+                if (llmResult.model_info && llmResult.model_info.model) {
+                    updateModelStatus('llm', 'success', 'Loaded');
+                } else {
+                    updateModelStatus('llm', 'warning', 'Validated');
+                }
+                
+                // Load voice model
+                showModelLoadingStatus('Loading voice model...', 'loading');
+                updateModelStatus('voice', 'loading', 'Loading...');
+                
+                const voiceResponse = await fetch('/load_voice_model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        model_path: voiceModelPath,
+                        json_path: voiceJsonPath 
+                    })
+                });
+                
+                if (!voiceResponse.ok) {
+                    throw new Error('Failed to load voice model');
+                }
+                
+                updateModelStatus('voice', 'success', 'Loaded');
+                
+                // Success - enable chat interface
+                showModelLoadingStatus('Both models loaded successfully! Chat interface is now available.', 'success');
+                document.getElementById('chatInterface').style.display = 'block';
+                loadBtn.textContent = '✅ Models Loaded';
+                loadBtn.disabled = true;
+                
+            } catch (error) {
+                console.error('Model loading failed:', error);
+                showModelLoadingStatus(`Failed to load models: ${error.message}`, 'error');
+                updateModelStatus('llm', 'error', 'Failed');
+                updateModelStatus('voice', 'error', 'Failed');
+                
+                // Re-enable button
+                loadBtn.disabled = false;
+                loadBtn.textContent = '🔄 Load Models';
+            }
+        }
+
+        // Update model status indicators
+        function updateModelStatus(modelType, status, text) {
+            const statusElement = document.getElementById(`${modelType}-status`);
+            const textElement = document.getElementById(`${modelType}-status-text`);
+            
+            statusElement.className = `status-indicator status-${status}`;
+            textElement.textContent = text;
+        }
+
+        // Show model loading status
+        function showModelLoadingStatus(message, type) {
+            const statusDiv = document.getElementById('modelLoadingStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `loading-status ${type}`;
+        }
+
+        // Update model paths
+        function updateLLMModelPath() {
+            selectedLLMModel = document.getElementById('llm_model_select').value;
+        }
+
+        function updateVoiceModelPath() {
+            selectedVoiceModel = document.getElementById('voice_model_select').value;
+        }
+
+        function updateVoiceJsonPath() {
+            selectedVoiceJson = document.getElementById('voice_json_select').value;
+        }
+
+        // Upload LLM model
+        async function uploadLLMModel() {
+            const fileInput = document.getElementById('llm_model_upload');
+            if (!fileInput.files.length) return;
+
+            const formData = new FormData();
+            formData.append('llm_model', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload_llm_model', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showAlert('LLM model uploaded successfully!', 'success');
+                    loadLLMModels();
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to upload LLM model: ' + error.message, 'error');
+            }
+        }
+
+        // Download LLM model
+        async function downloadLLMModel() {
+            const url = document.getElementById('llm_model_url').value.trim();
+            const name = document.getElementById('llm_model_name').value.trim();
+
+            if (!url) {
+                showAlert('Please enter a URL', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/download_llm_model', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url, model_name: name })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showAlert('LLM model downloaded successfully!', 'success');
+                    loadLLMModels();
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to download LLM model: ' + error.message, 'error');
+            }
+        }
+
+        // Send chat message
+        async function sendChatMessage() {
+            const message = document.getElementById('chatInput').value.trim();
+            if (!message) return;
+
+            if (!selectedLLMModel) {
+                showAlert('Please select an LLM model first', 'error');
+                return;
+            }
+
+            const sendBtn = document.getElementById('sendChatBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '⏳ Sending...';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session_id: currentChatSession,
+                        message: message,
+                        llm_model_path: selectedLLMModel,
+                        voice_model_path: selectedVoiceModel,
+                        voice_json_path: selectedVoiceJson
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    // Add user message to chat
+                    addChatMessage('user', message);
+                    
+                    // Add AI response to chat
+                    addChatMessage('assistant', result.response, result.audio_url);
+                    
+                    // Clear input
+                    document.getElementById('chatInput').value = '';
+                    
+                    showAlert('Message sent successfully!', 'success');
+                } else {
+                    showAlert(result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to send message: ' + error.message, 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '💬 Send Message';
+            }
+        }
+
+        // Add message to chat
+        function addChatMessage(role, content, audioUrl = null) {
+            const chatMessages = document.getElementById('chatMessages');
+            
+            // Remove welcome message if it exists
+            const welcome = chatMessages.querySelector('.chat-welcome');
+            if (welcome) {
+                welcome.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${role}-message`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const roleLabel = role === 'user' ? 'You' : 'AI';
+            
+            let messageContent = `
+                <div class="message-header">
+                    <span class="message-role">${roleLabel}</span>
+                    <span class="message-time">${timestamp}</span>
+                </div>
+                <div class="message-content">${content}</div>
+            `;
+
+            if (audioUrl && role === 'assistant') {
+                messageContent += `
+                    <div class="message-audio">
+                        <audio controls>
+                            <source src="${audioUrl}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <a href="${audioUrl}" download="ai_response.wav" class="btn btn-sm btn-secondary">
+                            💾 Download Audio
+                        </a>
+                    </div>
+                `;
+            }
+
+            messageDiv.innerHTML = messageContent;
+            chatMessages.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Autoplay audio if enabled
+            if (audioUrl && role === 'assistant' && isAutoplayEnabled()) {
+                const audioElement = messageDiv.querySelector('audio');
+                if (audioElement) {
+                    // Small delay to ensure audio is loaded
+                    setTimeout(() => {
+                        audioElement.play().catch(error => {
+                            console.log('Autoplay failed:', error);
+                        });
+                    }, 500);
+                }
+            }
+        }
+
+        // Clear chat history
+        async function clearChatHistory() {
+            try {
+                const response = await fetch(`/clear_chat/${currentChatSession}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div class="chat-welcome">
+                            <p>Welcome to the AI Chat! Select your LLM model and voice model above to start chatting.</p>
+                            <p>The AI will respond with text and speak its responses using your selected voice model.</p>
+                        </div>
+                    `;
+                    showAlert('Chat history cleared!', 'success');
+                }
+            } catch (error) {
+                showAlert('Failed to clear chat: ' + error.message, 'error');
+            }
+        }
+
+        // Load chat history
+        async function loadChatHistory() {
+            try {
+                const response = await fetch(`/chat_history/${currentChatSession}`);
+                const result = await response.json();
+
+                if (response.ok && result.messages.length > 0) {
+                    const chatMessages = document.getElementById('chatMessages');
+                    chatMessages.innerHTML = '';
+
+                    result.messages.forEach(msg => {
+                        addChatMessage(msg.role, msg.content);
+                    });
+
+                    showAlert('Chat history loaded!', 'success');
+                } else {
+                    showAlert('No chat history found', 'info');
+                }
+            } catch (error) {
+                showAlert('Failed to load chat history: ' + error.message, 'error');
+            }
+        }
+        
+        // Autoplay functionality
+        function toggleAutoplay() {
+            const toggle = document.getElementById('autoplayToggle');
+            const isEnabled = toggle.checked;
+            
+            // Save preference to localStorage
+            localStorage.setItem('autoplayAudio', isEnabled);
+            
+            // Show feedback
+            if (isEnabled) {
+                showAlert('🔊 Autoplay enabled! AI responses will play automatically.', 'success');
+            } else {
+                showAlert('🔇 Autoplay disabled. Click play buttons to hear AI responses.', 'info');
+            }
+        }
+        
+        function isAutoplayEnabled() {
+            const toggle = document.getElementById('autoplayToggle');
+            return toggle ? toggle.checked : false;
+        }
+        
+        // Initialize autoplay toggle on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const autoplayToggle = document.getElementById('autoplayToggle');
+            if (autoplayToggle) {
+                // Load saved preference
+                const savedAutoplay = localStorage.getItem('autoplayAudio');
+                if (savedAutoplay !== null) {
+                    autoplayToggle.checked = savedAutoplay === 'true';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
