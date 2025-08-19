@@ -40,13 +40,20 @@ apt-get update && apt-get install -y \
     build-essential \
     pkg-config
 
-# Clone the repository
-echo "📥 Cloning PiperTTS repository..."
+# Clone or update the repository
+echo "📥 Setting up PiperTTS repository..."
 cd $WORKSPACE_DIR
-if [ ! -d "piper1-gpl" ]; then
+if [ -d "piper1-gpl" ]; then
+    echo "🔄 Repository exists, updating to latest version..."
+    cd piper1-gpl
+    git fetch origin
+    git reset --hard origin/main
+    echo "✅ Repository updated to latest version"
+else
+    echo "📥 Cloning new repository..."
     git clone https://github.com/Royza/piper1-gpl.git
+    cd piper1-gpl
 fi
-cd piper1-gpl
 
 # Create virtual environment
 echo "🐍 Setting up Python virtual environment..."
