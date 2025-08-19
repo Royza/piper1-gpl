@@ -231,7 +231,7 @@ def calculate_optimal_settings(system_info=None):
 @app.route('/')
 def index():
     """Main training configuration page"""
-    return render_template('index.html', autoplay_audio=request.args.get('autoplay', 'false').lower() == 'true')
+    return render_template('index.html', autoplay_audio=request.args.get('autoplay', 'false').lower() == 'true', version='1.0.1')
 
 @app.route('/test')
 def test():
