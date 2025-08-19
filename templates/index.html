@@ -1469,17 +1469,35 @@
             statusDiv.className = 'upload-status uploading';
             statusDiv.textContent = `Uploading ${fileInput.files.length} audio files...`;
             
+            // Start progress monitoring
+            const progressInterval = setInterval(async () => {
+                try {
+                    const progressResponse = await fetch('/upload_progress');
+                    const progress = await progressResponse.json();
+                    
+                    if (progress.is_uploading && progress.total_files > 0) {
+                        const percent = Math.round((progress.current_file / progress.total_files) * 100);
+                        statusDiv.textContent = `Uploading ${progress.current_file}/${progress.total_files} files (${percent}%) - ${progress.current_filename}`;
+                    }
+                } catch (error) {
+                    console.log('Progress fetch error:', error);
+                }
+            }, 500);
+            
             try {
                 const response = await fetch('/upload_audio', {
                     method: 'POST',
                     body: formData
                 });
                 
+                // Clear progress monitoring
+                clearInterval(progressInterval);
+                
                 const result = await response.json();
                 
                 if (response.ok) {
                     statusDiv.className = 'upload-status success';
-                    let message = `✅ Uploaded ${result.files.length} audio files successfully`;
+                    let message = `✅ ${result.message}`;
                     
                     // Add warnings if any
                     if (result.warnings && result.warnings.length > 0) {
@@ -1493,6 +1511,7 @@
                     statusDiv.textContent = '❌ ' + result.error;
                 }
             } catch (error) {
+                clearInterval(progressInterval);
                 statusDiv.className = 'upload-status error';
                 statusDiv.textContent = '❌ Upload failed: ' + error.message;
             }
@@ -2509,6 +2528,25 @@
             }
             formData.append('target_sample_rate', targetSampleRate);
             
+            // Start progress monitoring
+            const progressInterval = setInterval(async () => {
+                try {
+                    const progressResponse = await fetch('/upload_progress');
+                    const progress = await progressResponse.json();
+                    
+                    if (progress.is_uploading && progress.total_files > 0 && progress.operation === 'convert') {
+                        const percent = Math.round((progress.current_file / progress.total_files) * 100);
+                        statusDiv.innerHTML = `
+                            <div class="info-card">
+                                <div class="system-loading">Converting ${progress.current_file}/${progress.total_files} files (${percent}%) - ${progress.current_filename}</div>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.log('Progress fetch error:', error);
+                }
+            }, 500);
+            
             try {
                 statusDiv.innerHTML = `
                     <div class="info-card">
@@ -2521,12 +2559,15 @@
                     body: formData
                 });
                 
+                // Clear progress monitoring
+                clearInterval(progressInterval);
+                
                 const result = await response.json();
                 
                 if (response.ok) {
                     convertedAudioFiles = result.converted_files;
                     displayConvertedFiles(result.converted_files);
-                    showAlert(`Successfully converted ${result.converted_files.length} audio files`, 'success');
+                    showAlert(`${result.message}`, 'success');
                     updateMoveToTrainingButton();
                 } else {
                     showAlert(result.error || 'Audio conversion failed', 'danger');
@@ -2537,6 +2578,7 @@
                     `;
                 }
             } catch (error) {
+                clearInterval(progressInterval);
                 showAlert('Failed to convert audio: ' + error.message, 'danger');
                 statusDiv.innerHTML = `
                     <div class="error-card">

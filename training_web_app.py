@@ -78,6 +78,15 @@ training_status = {
     "progress": 0
 }
 
+# Global variables to track upload progress
+upload_progress = {
+    "is_uploading": False,
+    "current_file": 0,
+    "total_files": 0,
+    "current_filename": "",
+    "operation": ""  # "upload" or "convert"
+}
+
 # Add these new global variables after the existing ones
 LLM_MODELS_DIR = Path.cwd() / "models" / "LLM"
 LLM_MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -322,8 +331,23 @@ def upload_audio():
         validation_warnings = []
         total_files = len([f for f in audio_files if f.filename])
         
+        # Initialize progress tracking
+        upload_progress.update({
+            "is_uploading": True,
+            "current_file": 0,
+            "total_files": total_files,
+            "current_filename": "",
+            "operation": "upload"
+        })
+        
         for i, audio_file in enumerate(audio_files, 1):
             if audio_file.filename:
+                # Update progress
+                upload_progress.update({
+                    "current_file": i,
+                    "current_filename": audio_file.filename
+                })
+                
                 safe_filename = secure_filename(audio_file.filename)
                 if safe_filename:
                     file_path = audio_dir / safe_filename
@@ -343,6 +367,15 @@ def upload_audio():
                     else:
                         # Skip validation, just accept the file
                         uploaded_files.append(safe_filename)
+        
+        # Reset progress tracking
+        upload_progress.update({
+            "is_uploading": False,
+            "current_file": 0,
+            "total_files": 0,
+            "current_filename": "",
+            "operation": ""
+        })
         
         response_data = {
             "message": f"{len(uploaded_files)}/{total_files} audio files uploaded successfully",
@@ -795,6 +828,11 @@ def get_status():
         "error": training_status.get("error")
     }
     return jsonify(status_copy)
+
+@app.route('/upload_progress')
+def get_upload_progress():
+    """Get current upload progress"""
+    return jsonify(upload_progress)
 
 def extract_training_progress():
     """Extract training progress from log file with ETA estimation"""
@@ -1680,9 +1718,24 @@ def convert_audio():
         converted_files = []
         total_files = len([f for f in audio_files if f.filename])
         
+        # Initialize progress tracking
+        upload_progress.update({
+            "is_uploading": True,
+            "current_file": 0,
+            "total_files": total_files,
+            "current_filename": "",
+            "operation": "convert"
+        })
+        
         for i, audio_file in enumerate(audio_files, 1):
             if audio_file.filename == '':
                 continue
+            
+            # Update progress
+            upload_progress.update({
+                "current_file": i,
+                "current_filename": audio_file.filename
+            })
                 
             # Save uploaded file temporarily
             temp_input_path = conversion_dir / f"input_{audio_file.filename}"
@@ -1725,6 +1778,15 @@ def convert_audio():
                 # Clean up temporary input file
                 if temp_input_path.exists():
                     temp_input_path.unlink()
+        
+        # Reset progress tracking
+        upload_progress.update({
+            "is_uploading": False,
+            "current_file": 0,
+            "total_files": 0,
+            "current_filename": "",
+            "operation": ""
+        })
         
         if not converted_files:
             return jsonify({"error": "No audio files could be converted"}), 400
