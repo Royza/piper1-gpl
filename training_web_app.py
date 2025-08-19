@@ -45,6 +45,10 @@ except ImportError:
 
 app = Flask(__name__)
 
+# Configure upload limits for large file batches
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10GB max upload size
+app.config['UPLOAD_TIMEOUT'] = 3600  # 1 hour timeout
+
 # Configuration
 DATASETS_DIR = Path("datasets")
 CHECKPOINTS_DIR = Path("checkpoints") 
@@ -316,8 +320,9 @@ def upload_audio():
         # Save and validate new audio files
         uploaded_files = []
         validation_warnings = []
+        total_files = len([f for f in audio_files if f.filename])
         
-        for audio_file in audio_files:
+        for i, audio_file in enumerate(audio_files, 1):
             if audio_file.filename:
                 safe_filename = secure_filename(audio_file.filename)
                 if safe_filename:
@@ -340,7 +345,7 @@ def upload_audio():
                         uploaded_files.append(safe_filename)
         
         response_data = {
-            "message": f"Uploaded {len(uploaded_files)} valid audio files",
+            "message": f"{len(uploaded_files)}/{total_files} audio files uploaded successfully",
             "files": uploaded_files,
             "audio_dir": str(audio_dir)
         }
@@ -1673,8 +1678,9 @@ def convert_audio():
         conversion_dir.mkdir(exist_ok=True)
         
         converted_files = []
+        total_files = len([f for f in audio_files if f.filename])
         
-        for audio_file in audio_files:
+        for i, audio_file in enumerate(audio_files, 1):
             if audio_file.filename == '':
                 continue
                 
@@ -1724,7 +1730,7 @@ def convert_audio():
             return jsonify({"error": "No audio files could be converted"}), 400
         
         return jsonify({
-            "message": f"Successfully converted {len(converted_files)} audio files",
+            "message": f"{len(converted_files)}/{total_files} audio files converted successfully",
             "converted_files": converted_files,
             "target_sample_rate": target_sample_rate
         })
