@@ -1507,6 +1507,11 @@
                     statusDiv.className = 'upload-status success';
                     let message = `✅ ${result.message}`;
                     
+                    // Add total files count prominently
+                    if (result.total_files_in_session !== undefined) {
+                        message += `\n📊 Total audio files in directory: ${result.total_files_in_session}`;
+                    }
+                    
                     // Add warnings if any
                     if (result.warnings && result.warnings.length > 0) {
                         message += `\n⚠️ Warnings:\n${result.warnings.join('\n')}`;

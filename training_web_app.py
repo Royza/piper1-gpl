@@ -238,6 +238,34 @@ def test():
     """Test endpoint to verify server is working"""
     return jsonify({"status": "ok", "message": "Server is running", "timestamp": datetime.now().isoformat()})
 
+@app.route('/session_info/<voice_name>')
+def get_session_info(voice_name):
+    """Get information about a session including file counts"""
+    try:
+        safe_voice_name = secure_filename(voice_name)
+        session_dir = DATASETS_DIR / safe_voice_name
+        
+        if not session_dir.exists():
+            return jsonify({"error": "Session not found"}), 404
+        
+        audio_dir = session_dir / "audio"
+        csv_dir = session_dir / "csv"
+        
+        audio_files = len(list(audio_dir.glob("*"))) if audio_dir.exists() else 0
+        csv_files = len(list(csv_dir.glob("*"))) if csv_dir.exists() else 0
+        
+        return jsonify({
+            "voice_name": voice_name,
+            "session_dir": str(session_dir),
+            "audio_files_count": audio_files,
+            "csv_files_count": csv_files,
+            "session_exists": True,
+            "ready_for_training": audio_files > 0 and csv_files > 0
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to get session info: {str(e)}"}), 500
+
 @app.route('/create_session', methods=['POST'])
 def create_session():
     """Create a new training session with organized directory structure"""
@@ -397,7 +425,7 @@ def upload_audio():
             total_files_in_dir = len(list(audio_dir.glob("*")))
             
             response_data = {
-                "message": f"{len(uploaded_files)} new files uploaded successfully. Total files in session: {total_files_in_dir}",
+                "message": f"{len(uploaded_files)} new files uploaded successfully. Total audio files in directory: {total_files_in_dir}",
                 "files": uploaded_files,
                 "audio_dir": str(audio_dir),
                 "total_files_in_session": total_files_in_dir
