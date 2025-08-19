@@ -88,6 +88,10 @@ if [ $(python -c 'import torch; print(torch.cuda.device_count())') -gt 0 ]; then
     echo "GPU memory: $(python -c 'import torch; print(f"{torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")')"
 fi
 
+# Test Flask installation
+echo "🧪 Testing Flask installation..."
+python -c "import flask; print(f'Flask version: {flask.__version__}')"
+
 # Start the web server
 echo ""
 echo "🎉 Setup complete! Starting Enhanced PiperTTS Training Web Server..."
@@ -97,5 +101,6 @@ echo "💾 Workspace mounted at: $WORKSPACE_DIR"
 echo "🔧 SSH access available for debugging"
 echo ""
 
-# Start the Flask web server
+# Start the Flask web server with explicit host binding
+echo "🚀 Starting Flask web server..."
 python training_web_app.py --host 0.0.0.0 --port 5000
