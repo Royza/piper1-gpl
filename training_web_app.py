@@ -63,7 +63,7 @@ CHECKPOINTS_DIR = Path("checkpoints")
 LOGS_DIR = Path("logs")
 
 # Feature flags
-ENABLE_AUDIO_VALIDATION = True  # Set to False to disable audio validation
+ENABLE_AUDIO_VALIDATION = False  # Set to False to disable audio validation warnings during upload
 
 # Cache management settings
 MAX_CACHE_SIZE_GB = 10.0  # Maximum cache size in GB
@@ -430,9 +430,6 @@ def upload_audio():
                 "audio_dir": str(audio_dir),
                 "total_files_in_session": total_files_in_dir
             }
-            
-            if validation_warnings:
-                response_data["warnings"] = validation_warnings
             
             return jsonify(response_data)
             
