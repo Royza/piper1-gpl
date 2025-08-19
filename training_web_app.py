@@ -342,7 +342,7 @@ def upload_csv():
 
 @app.route('/upload_audio', methods=['POST'])
 def upload_audio():
-    """Upload and save audio files"""
+    """Upload and save audio files with chunked processing for large batches"""
     try:
         voice_name = request.form.get('voice_name', '').strip()
         
@@ -363,12 +363,10 @@ def upload_audio():
             return jsonify({"error": "Session not created. Please create session first."}), 400
         
         try:
-            # Don't clear existing files - allow batch uploads
-            # Only clear if explicitly requested (for now, we'll keep existing files)
-            
-            # Save and validate new audio files
+            # Process files in smaller chunks to avoid server limits
             uploaded_files = []
-            total_files = len([f for f in audio_files if f.filename])
+            valid_files = [f for f in audio_files if f.filename]
+            total_files = len(valid_files)
             
             # Initialize progress tracking
             upload_progress.update({
@@ -379,19 +377,28 @@ def upload_audio():
                 "operation": "upload"
             })
             
-            for i, audio_file in enumerate(audio_files, 1):
-                if audio_file.filename:
-                    # Update progress
-                    upload_progress.update({
-                        "current_file": i,
-                        "current_filename": audio_file.filename
-                    })
-                    
-                    safe_filename = secure_filename(audio_file.filename)
-                    if safe_filename:
-                        file_path = audio_dir / safe_filename
-                        audio_file.save(file_path)
-                        uploaded_files.append(safe_filename)
+            # Process files in chunks of 100 to avoid server limits
+            chunk_size = 100
+            for chunk_start in range(0, total_files, chunk_size):
+                chunk_end = min(chunk_start + chunk_size, total_files)
+                chunk_files = valid_files[chunk_start:chunk_end]
+                
+                for i, audio_file in enumerate(chunk_files, chunk_start + 1):
+                    if audio_file.filename:
+                        # Update progress
+                        upload_progress.update({
+                            "current_file": i,
+                            "current_filename": audio_file.filename
+                        })
+                        
+                        safe_filename = secure_filename(audio_file.filename)
+                        if safe_filename:
+                            file_path = audio_dir / safe_filename
+                            audio_file.save(file_path)
+                            uploaded_files.append(safe_filename)
+                
+                # Small delay between chunks to prevent server overload
+                time.sleep(0.1)
             
             # Reset progress tracking
             upload_progress.update({
@@ -415,9 +422,25 @@ def upload_audio():
             return jsonify(response_data)
             
         except Exception as e:
+            # Reset progress tracking on error
+            upload_progress.update({
+                "is_uploading": False,
+                "current_file": 0,
+                "total_files": 0,
+                "current_filename": "",
+                "operation": ""
+            })
             return jsonify({"error": f"Failed to upload audio files: {str(e)}"}), 500
         
     except Exception as e:
+        # Reset progress tracking on error
+        upload_progress.update({
+            "is_uploading": False,
+            "current_file": 0,
+            "total_files": 0,
+            "current_filename": "",
+            "operation": ""
+        })
         return jsonify({"error": f"Upload request failed: {str(e)}"}), 500
 
 def validate_audio_file(file_path):

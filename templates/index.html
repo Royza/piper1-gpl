@@ -1505,39 +1505,61 @@
             }, 500);
             
             try {
-                const formData = new FormData();
-                formData.append('voice_name', voiceName);
+                // For large batches, process in chunks to avoid server limits
+                const chunkSize = 50; // Smaller chunks for better reliability
+                let totalUploaded = 0;
+                let allUploadedFiles = [];
                 
-                // Add all audio files to form data
-                audioFiles.forEach(file => {
-                    formData.append('audio_files', file);
-                });
-                
-                const response = await fetch('/upload_audio', {
-                    method: 'POST',
-                    body: formData
-                });
+                for (let i = 0; i < audioFiles.length; i += chunkSize) {
+                    const chunk = audioFiles.slice(i, i + chunkSize);
+                    const chunkNumber = Math.floor(i / chunkSize) + 1;
+                    const totalChunks = Math.ceil(audioFiles.length / chunkSize);
+                    
+                    statusDiv.textContent = `Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} files)...`;
+                    
+                    const formData = new FormData();
+                    formData.append('voice_name', voiceName);
+                    chunk.forEach(file => {
+                        formData.append('audio_files', file);
+                    });
+                    
+                    const response = await fetch('/upload_audio', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        totalUploaded += chunk.length;
+                        if (result.files) {
+                            allUploadedFiles = allUploadedFiles.concat(result.files);
+                        }
+                        statusDiv.textContent = `✅ Chunk ${chunkNumber}/${totalChunks} uploaded (${totalUploaded}/${audioFiles.length} total)`;
+                    } else {
+                        clearInterval(progressInterval);
+                        statusDiv.className = 'upload-status error';
+                        statusDiv.textContent = `❌ Chunk ${chunkNumber} failed: ${result.error}`;
+                        return;
+                    }
+                    
+                    // Small delay between chunks
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
                 
                 // Clear progress monitoring
                 clearInterval(progressInterval);
                 
-                const result = await response.json();
+                statusDiv.className = 'upload-status success';
+                let message = `✅ All ${totalUploaded} files uploaded successfully!`;
                 
-                if (response.ok) {
-                    statusDiv.className = 'upload-status success';
-                    let message = `✅ ${result.message}`;
-                    
-                    // Add total files count prominently
-                    if (result.total_files_in_session !== undefined) {
-                        message += `\n📊 Total audio files in directory: ${result.total_files_in_session}`;
-                    }
-                    
-                    statusDiv.textContent = message;
-                    checkTrainingReady();
-                } else {
-                    statusDiv.className = 'upload-status error';
-                    statusDiv.textContent = '❌ ' + result.error;
+                // Add total files count prominently
+                if (allUploadedFiles.length > 0) {
+                    message += `\n📊 Total audio files in directory: ${allUploadedFiles.length}`;
                 }
+                
+                statusDiv.textContent = message;
+                checkTrainingReady();
             } catch (error) {
                 clearInterval(progressInterval);
                 statusDiv.className = 'upload-status error';
