@@ -2409,4 +2409,4 @@ if __name__ == '__main__':
     print(f"Logs directory: {LOGS_DIR.absolute()}")
     print("Session-based training structure enabled!")
     
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

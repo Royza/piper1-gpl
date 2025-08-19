@@ -101,6 +101,6 @@ echo "💾 Workspace mounted at: $WORKSPACE_DIR"
 echo "🔧 SSH access available for debugging"
 echo ""
 
-# Start the Flask web server with explicit host binding
+# Start the Flask web server with explicit host binding and correct port
 echo "🚀 Starting Flask web server..."
 python training_web_app.py --host 0.0.0.0 --port 5000
