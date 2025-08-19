@@ -64,9 +64,15 @@ source .venv/bin/activate
 echo "⬆️ Upgrading pip..."
 pip install --upgrade pip
 
-# Install PyTorch with CUDA support
+# Install PyTorch with CUDA support (latest version for RTX 5090)
 echo "🔥 Installing PyTorch with CUDA support..."
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# If CUDA 12.4 fails, try CUDA 12.1 as fallback
+if [ $? -ne 0 ]; then
+    echo "🔄 CUDA 12.4 failed, trying CUDA 12.1..."
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+fi
 
 # Install PiperTTS core
 echo "🎤 Installing PiperTTS core..."

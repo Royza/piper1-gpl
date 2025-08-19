@@ -1,10 +1,10 @@
 # Enhanced PiperTTS Training System Requirements
 # Core dependencies for the web interface and training system
 
-# PyTorch with CUDA support (for GPU training)
-torch>=2.0.0
-torchvision>=0.15.0
-torchaudio>=2.0.0
+# PyTorch with CUDA support (for GPU training) - RTX 5090 compatible
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
 
 # Web framework for the training interface
 Flask>=2.3.0
