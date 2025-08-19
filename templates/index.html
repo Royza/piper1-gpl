@@ -883,13 +883,14 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="audio_upload">Audio Files *</label>
-                        <div class="upload-area" onclick="document.getElementById('audio_files').click()">
-                            <input type="file" id="audio_files" multiple accept=".wav,.mp3,.flac" style="display: none;" onchange="uploadAudio()">
+                        <label for="audio_upload">Audio Folder Path *</label>
+                        <div class="upload-area">
                             <div class="upload-placeholder">
-                                <span class="upload-icon">🎵</span>
-                                <span class="upload-text">Click to select audio files (.wav, .mp3, .flac)</span>
+                                <span class="upload-icon">📁</span>
+                                <span class="upload-text">Enter the full path to your audio folder</span>
                             </div>
+                            <input type="text" id="audio_folder_path" placeholder="/path/to/your/audio/folder" style="width: 100%; margin-top: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            <button type="button" onclick="uploadAudioFolder()" style="margin-top: 10px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Process Folder</button>
                         </div>
                         <div id="audioStatus" class="upload-status"></div>
                     </div>
@@ -1449,7 +1450,78 @@
             }
         }
         
-        // Audio files upload
+        // Audio folder upload
+        async function uploadAudioFolder() {
+            const voiceName = document.getElementById('voice_name').value.trim();
+            const folderPathInput = document.getElementById('audio_folder_path');
+            const statusDiv = document.getElementById('audioStatus');
+            
+            const folderPath = folderPathInput.value.trim();
+            
+            if (!folderPath) {
+                statusDiv.className = 'upload-status error';
+                statusDiv.textContent = '❌ Please enter a folder path';
+                return;
+            }
+            
+            statusDiv.className = 'upload-status uploading';
+            statusDiv.textContent = `Processing folder: ${folderPath}...`;
+            
+            // Start progress monitoring
+            const progressInterval = setInterval(async () => {
+                try {
+                    const progressResponse = await fetch('/upload_progress');
+                    const progress = await progressResponse.json();
+                    
+                    if (progress.is_uploading && progress.total_files > 0) {
+                        const percent = Math.round((progress.current_file / progress.total_files) * 100);
+                        statusDiv.textContent = `Processing ${progress.current_file}/${progress.total_files} files (${percent}%) - ${progress.current_filename}`;
+                    }
+                } catch (error) {
+                    console.log('Progress fetch error:', error);
+                }
+            }, 500);
+            
+            try {
+                const response = await fetch('/upload_audio_folder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        voice_name: voiceName,
+                        folder_path: folderPath
+                    })
+                });
+                
+                // Clear progress monitoring
+                clearInterval(progressInterval);
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'upload-status success';
+                    let message = `✅ ${result.message}`;
+                    
+                    // Add total files count prominently
+                    if (result.total_files_in_session !== undefined) {
+                        message += `\n📊 Total audio files in directory: ${result.total_files_in_session}`;
+                    }
+                    
+                    statusDiv.textContent = message;
+                    checkTrainingReady();
+                } else {
+                    statusDiv.className = 'upload-status error';
+                    statusDiv.textContent = '❌ ' + result.error;
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                statusDiv.className = 'upload-status error';
+                statusDiv.textContent = '❌ Upload failed: ' + error.message;
+            }
+        }
+        
+        // Audio files upload (keeping for backward compatibility)
         async function uploadAudio() {
             const voiceName = document.getElementById('voice_name').value.trim();
             const fileInput = document.getElementById('audio_files');

@@ -340,25 +340,27 @@ def upload_csv():
     except Exception as e:
         return jsonify({"error": f"Failed to upload CSV: {str(e)}"}), 500
 
-@app.route('/upload_audio', methods=['POST'])
-def upload_audio():
-    """Upload and save audio files"""
+@app.route('/upload_audio_folder', methods=['POST'])
+def upload_audio_folder():
+    """Upload audio files from a folder path"""
     try:
-        # Check if request is too large (only if we have a limit set)
-        if app.config['MAX_CONTENT_LENGTH'] and request.content_length and request.content_length > app.config['MAX_CONTENT_LENGTH']:
-            return jsonify({"error": f"Upload too large. Maximum size is {app.config['MAX_CONTENT_LENGTH'] / (1024**3):.1f}GB. Try uploading in smaller batches of 500-1000 files."}), 413
-        
-        voice_name = request.form.get('voice_name', '').strip()
+        data = request.get_json()
+        voice_name = data.get('voice_name', '').strip()
+        folder_path = data.get('folder_path', '').strip()
         
         if not voice_name:
             return jsonify({"error": "Voice name is required"}), 400
         
-        if 'audio_files' not in request.files:
-            return jsonify({"error": "No audio files provided"}), 400
+        if not folder_path:
+            return jsonify({"error": "Folder path is required"}), 400
         
-        audio_files = request.files.getlist('audio_files')
-        if not audio_files or all(f.filename == '' for f in audio_files):
-            return jsonify({"error": "No files selected"}), 400
+        # Validate folder path
+        folder_path = Path(folder_path)
+        if not folder_path.exists():
+            return jsonify({"error": f"Folder not found: {folder_path}"}), 400
+        
+        if not folder_path.is_dir():
+            return jsonify({"error": f"Path is not a directory: {folder_path}"}), 400
         
         safe_voice_name = secure_filename(voice_name)
         audio_dir = DATASETS_DIR / safe_voice_name / "audio"
@@ -367,50 +369,57 @@ def upload_audio():
             return jsonify({"error": "Session not created. Please create session first."}), 400
         
         try:
-            # Don't clear existing files - allow batch uploads
-            # Only clear if explicitly requested (for now, we'll keep existing files)
+            # Find all .wav files in the folder
+            wav_files = list(folder_path.glob("*.wav"))
+            mp3_files = list(folder_path.glob("*.mp3"))
+            flac_files = list(folder_path.glob("*.flac"))
             
-            # Save and validate new audio files
-            uploaded_files = []
-            validation_warnings = []
-            total_files = len([f for f in audio_files if f.filename])
+            all_audio_files = wav_files + mp3_files + flac_files
+            
+            if not all_audio_files:
+                return jsonify({"error": f"No audio files (.wav, .mp3, .flac) found in folder: {folder_path}"}), 400
             
             # Initialize progress tracking
             upload_progress.update({
                 "is_uploading": True,
                 "current_file": 0,
-                "total_files": total_files,
+                "total_files": len(all_audio_files),
                 "current_filename": "",
                 "operation": "upload"
             })
             
-            for i, audio_file in enumerate(audio_files, 1):
-                if audio_file.filename:
+            uploaded_files = []
+            failed_files = []
+            
+            for i, audio_file_path in enumerate(all_audio_files, 1):
+                try:
                     # Update progress
                     upload_progress.update({
                         "current_file": i,
-                        "current_filename": audio_file.filename
+                        "current_filename": audio_file_path.name
                     })
                     
-                    safe_filename = secure_filename(audio_file.filename)
-                    if safe_filename:
-                        file_path = audio_dir / safe_filename
-                        audio_file.save(file_path)
-                        
-                        # Validate audio file (if enabled)
-                        if ENABLE_AUDIO_VALIDATION:
-                            validation_result = validate_audio_file(file_path)
-                            if validation_result["valid"]:
-                                uploaded_files.append(safe_filename)
-                                if validation_result.get("warnings"):
-                                    validation_warnings.extend([f"{safe_filename}: {w}" for w in validation_result["warnings"]])
-                            else:
-                                # Remove invalid file
-                                file_path.unlink()
-                                validation_warnings.append(f"{safe_filename}: {validation_result['error']} (file removed)")
-                        else:
-                            # Skip validation, just accept the file
-                            uploaded_files.append(safe_filename)
+                    # Copy file to audio directory
+                    destination_path = audio_dir / audio_file_path.name
+                    
+                    # Handle filename conflicts
+                    if destination_path.exists():
+                        base_name = audio_file_path.stem
+                        extension = audio_file_path.suffix
+                        counter = 1
+                        while destination_path.exists():
+                            new_name = f"{base_name}_{counter}{extension}"
+                            destination_path = audio_dir / new_name
+                            counter += 1
+                    
+                    # Copy the file
+                    import shutil
+                    shutil.copy2(audio_file_path, destination_path)
+                    uploaded_files.append(destination_path.name)
+                    
+                except Exception as e:
+                    failed_files.append(f"{audio_file_path.name}: {str(e)}")
+                    continue
             
             # Reset progress tracking
             upload_progress.update({
@@ -425,16 +434,20 @@ def upload_audio():
             total_files_in_dir = len(list(audio_dir.glob("*")))
             
             response_data = {
-                "message": f"{len(uploaded_files)} new files uploaded successfully. Total audio files in directory: {total_files_in_dir}",
+                "message": f"{len(uploaded_files)} files copied from folder successfully. Total audio files in directory: {total_files_in_dir}",
                 "files": uploaded_files,
                 "audio_dir": str(audio_dir),
-                "total_files_in_session": total_files_in_dir
+                "total_files_in_session": total_files_in_dir,
+                "failed_files": failed_files
             }
+            
+            if failed_files:
+                response_data["message"] += f" ({len(failed_files)} files failed)"
             
             return jsonify(response_data)
             
         except Exception as e:
-            return jsonify({"error": f"Failed to upload audio files: {str(e)}"}), 500
+            return jsonify({"error": f"Failed to process folder: {str(e)}"}), 500
         
     except Exception as e:
         return jsonify({"error": f"Upload request failed: {str(e)}"}), 500
