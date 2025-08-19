@@ -233,6 +233,11 @@ def index():
     """Main training configuration page"""
     return render_template('index.html', autoplay_audio=request.args.get('autoplay', 'false').lower() == 'true')
 
+@app.route('/test')
+def test():
+    """Test endpoint to verify server is working"""
+    return jsonify({"status": "ok", "message": "Server is running", "timestamp": datetime.now().isoformat()})
+
 @app.route('/create_session', methods=['POST'])
 def create_session():
     """Create a new training session with organized directory structure"""
@@ -848,7 +853,10 @@ def get_status():
 @app.route('/upload_progress')
 def get_upload_progress():
     """Get current upload progress"""
-    return jsonify(upload_progress)
+    try:
+        return jsonify(upload_progress)
+    except Exception as e:
+        return jsonify({"error": f"Failed to get progress: {str(e)}"}), 500
 
 def extract_training_progress():
     """Extract training progress from log file with ETA estimation"""
@@ -2504,4 +2512,4 @@ if __name__ == '__main__':
     print("Session-based training structure enabled!")
     print(f"Max upload size: {app.config['MAX_CONTENT_LENGTH'] / (1024**3):.1f}GB")
     
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True, use_reloader=False)
